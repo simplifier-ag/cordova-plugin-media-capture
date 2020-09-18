@@ -23,7 +23,6 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -37,14 +36,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.support.annotation.Nullable;
-import android.support.media.ExifInterface;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PermissionHelper;
-import org.apache.cordova.PluginManager;
 import org.apache.cordova.file.FileUtils;
 import org.apache.cordova.file.LocalFilesystemURL;
 import org.apache.cordova.mediacapture.PendingRequests.Request;
@@ -52,13 +48,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 
 public class Capture extends CordovaPlugin {
@@ -263,23 +254,19 @@ public class Capture extends CordovaPlugin {
      * Sets up an intent to capture images.  Result handled by onActivityResult()
      */
     private void captureImage(Request req) {
-        boolean needExternalStoragePermission = !PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+        boolean needExternalStoragePermission =
+                !PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
         boolean needCameraPermission = cameraPermissionInManifest &&
                 !PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
 
-        boolean needWriteExternalStoragePermission =
-                !PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-
-        if (needWriteExternalStoragePermission || needExternalStoragePermission || needCameraPermission) {
-            if (needExternalStoragePermission && needCameraPermission && needWriteExternalStoragePermission) {
-                PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE});
+        if (needExternalStoragePermission || needCameraPermission) {
+            if (needExternalStoragePermission && needCameraPermission) {
+                PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.CAMERA});
             } else if (needExternalStoragePermission) {
-                PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
-            } else if (needCameraPermission) {
-                PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.CAMERA);
-            } else {
                 PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            } else {
+                PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.CAMERA);
             }
         } else {
             // Save the number of images currently on disk for later
@@ -297,17 +284,6 @@ public class Capture extends CordovaPlugin {
 
             this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
         }
-    }
-
-    private static void createWritableFile(File file) throws IOException {
-        file.createNewFile();
-        file.setWritable(true, false);
-    }
-
-    private static Bitmap rotateImage(Bitmap source, float angle) {
-        Matrix matrix = new Matrix();
-        matrix.postRotate(angle);
-        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
     }
 
     /**
@@ -417,16 +393,8 @@ public class Capture extends CordovaPlugin {
     }
 
     public void onImageActivityResult(Request req) {
-        Uri uri = imageUri;
-
-        // Check image rotation
-        Bitmap rotatedBitmap = rotateAccordingToExifOrientation(uri);
-        if (rotatedBitmap != null) {
-            uri = fromBitmapToUri(this.cordova.getContext(), rotatedBitmap);
-        }
-
         // Add image to results
-        req.results.put(createMediaFile(uri));
+        req.results.put(createMediaFile(imageUri));
 
         checkForDuplicateImage();
 
@@ -480,24 +448,13 @@ public class Capture extends CordovaPlugin {
         File fp = webView.getResourceApi().mapUriToFile(data);
         JSONObject obj = new JSONObject();
 
-        Class webViewClass = webView.getClass();
-        PluginManager pm = null;
-        try {
-            Method gpm = webViewClass.getMethod("getPluginManager");
-            pm = (PluginManager) gpm.invoke(webView);
-        } catch (NoSuchMethodException e) {
-        } catch (IllegalAccessException e) {
-        } catch (InvocationTargetException e) {
+
+        FileUtils filePlugin = (FileUtils)this.webView.getPluginManager().getPlugin("File");
+        if(filePlugin == null) {
+            LOG.e(LOG_TAG, "Failed find cordova-plugin-file");
+            return null;
         }
-        if (pm == null) {
-            try {
-                Field pmf = webViewClass.getField("pluginManager");
-                pm = (PluginManager) pmf.get(webView);
-            } catch (NoSuchFieldException e) {
-            } catch (IllegalAccessException e) {
-            }
-        }
-        FileUtils filePlugin = (FileUtils) pm.getPlugin("File");
+
         LocalFilesystemURL url = filePlugin.filesystemURLforLocalPath(fp.getAbsolutePath());
 
         try {
@@ -582,52 +539,6 @@ public class Capture extends CordovaPlugin {
         } else {
             return android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI;
         }
-    }
-
-    @Nullable
-    private Bitmap rotateAccordingToExifOrientation(Uri uri) {
-        Context context = this.cordova.getContext();
-        int orientation;
-        Bitmap bitmap;
-        try {
-            InputStream inputStream = context.getContentResolver().openInputStream(uri);
-            if (inputStream == null)
-                throw new IOException("input stream from ContentResolver is null");
-            ExifInterface ei = new ExifInterface(inputStream);
-            orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
-            bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), uri);
-        } catch (IOException e) {
-            LOG.e(LOG_TAG, "Failed reading bitmap", e);
-            return null;
-        }
-
-        Bitmap rotatedBitmap;
-        switch (orientation) {
-            case ExifInterface.ORIENTATION_ROTATE_90:
-                rotatedBitmap = rotateImage(bitmap, 90);
-                break;
-
-            case ExifInterface.ORIENTATION_ROTATE_180:
-                rotatedBitmap = rotateImage(bitmap, 180);
-                break;
-
-            case ExifInterface.ORIENTATION_ROTATE_270:
-                rotatedBitmap = rotateImage(bitmap, 270);
-                break;
-
-            case ExifInterface.ORIENTATION_NORMAL:
-            default:
-                // use original bitmap
-                rotatedBitmap = null;
-        }
-        return rotatedBitmap;
-    }
-
-    private Uri fromBitmapToUri(Context context, Bitmap inImage) {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
-        String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), inImage, "title", null);
-        return Uri.parse(path);
     }
 
     private void executeRequest(Request req) {
