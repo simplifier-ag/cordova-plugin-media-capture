@@ -83,9 +83,35 @@
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         </config-file>
 
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+            <activity
+                android:name="org.apache.cordova.mediacapture.SingleCameraActivity"
+                android:launchMode="singleTop"
+                android:excludeFromRecents="true"
+                android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                android:theme="@style/Theme.AppCompat.NoActionBar">
+                <intent-filter>
+                    <action android:name="android.media.action.IMAGE_CAPTURE" />
+                    <category android:name="android.intent.category.DEFAULT" />
+                </intent-filter>
+            </activity>
+        </config-file>
+
+        <source-file src="src/android/AutoFitTextureView.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/CameraFragment.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/Capture.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/CaptureActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/PendingRequests.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/SingleCameraActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
+
+        <resource-file src="src/android/res/drawable/mediacap_capture.xml" target="res/drawable/mediacap_capture.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_check.xml" target="res/drawable/mediacap_check.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_repeat.xml" target="res/drawable/mediacap_repeat.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
+
+        <resource-file src="src/android/res/layout/camera_activity.xml" target="res/layout/camera_activity.xml"/>
+        <resource-file src="src/android/res/layout/camera_layout.xml" target="src/android/res/layout/camera_layout.xml"/>
 
         <js-module src="www/android/init.js" name="init">
             <runs />

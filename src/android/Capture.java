@@ -27,9 +27,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.Cursor;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -273,6 +271,7 @@ public class Capture extends CordovaPlugin {
             this.numPics = queryImgDB(whichContentStore()).getCount();
 
             Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+            //Intent intent = new Intent(cordova.getContext(), CaptureActivity.class);
 
             ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
             ContentValues cv = new ContentValues();
