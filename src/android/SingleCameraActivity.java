@@ -63,9 +63,7 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import io.cordova.hellocordova.R;
-
-public class SingleCameraActivity extends AppCompatActivity implements View.OnClickListener {
+public class SingleCameraActivity extends AppCompatActivity {
 	private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 	private static final int REQUEST_CAMERA_PERMISSION = 1;
 	private static final String FRAGMENT_DIALOG = "dialog";
@@ -238,11 +236,13 @@ public class SingleCameraActivity extends AppCompatActivity implements View.OnCl
 					@Override
 					public void onSuccess() {
 						runOnUiThread(() -> {
-							findViewById(R.id.cameraPreview).setVisibility(View.GONE);
-							findViewById(R.id.picturePreview).setVisibility(View.VISIBLE);
+							Context context = SingleCameraActivity.this;
+
+							findViewById(R.getId(context, "cameraPreview")).setVisibility(View.GONE);
+							findViewById(R.getId(context, "picturePreview")).setVisibility(View.VISIBLE);
 
 							if (mFile.exists()) {
-								AppCompatImageView capturedImageView = findViewById(R.id.capturedImageView);
+								AppCompatImageView capturedImageView = findViewById(R.getId(context, "capturedImageView"));
 								Bitmap bitmap = BitmapFactory.decodeFile(mFile.getAbsolutePath());
 								capturedImageView.setImageBitmap(bitmap);
 							}
@@ -259,9 +259,11 @@ public class SingleCameraActivity extends AppCompatActivity implements View.OnCl
 					@Override
 					public void onSuccess() {
 						runOnUiThread(() -> {
-							findViewById(R.id.cameraPreview).setVisibility(View.GONE);
-							findViewById(R.id.picturePreview).setVisibility(View.VISIBLE);
-							AppCompatImageView capturedImageView = findViewById(R.id.capturedImageView);
+							Context context = SingleCameraActivity.this;
+							findViewById(R.getId(context, "cameraPreview")).setVisibility(View.GONE);
+							findViewById(R.getId(context, "picturePreview")).setVisibility(View.VISIBLE);
+
+							AppCompatImageView capturedImageView = findViewById(R.getId(context, "capturedImageView"));
 
 							String[] filePath = {MediaStore.Images.Media.DATA};
 							Cursor cursor = getContentResolver().query(saveFileUri, filePath, null, null, null);
@@ -455,12 +457,32 @@ public class SingleCameraActivity extends AppCompatActivity implements View.OnCl
 		Log.i(TAG, "Using SingleCameraActivity.java");
 		setContentView(getResources().getIdentifier("camera_layout", "layout", getPackageName()));
 
-		findViewById(R.id.picture).setOnClickListener(this);
-		findViewById(R.id.switchCamera).setOnClickListener(this);
-		findViewById(R.id.pictureAccept).setOnClickListener(this);
-		findViewById(R.id.pictureRepeat).setOnClickListener(this);
+		findViewById(R.getId(this, "picture")).setOnClickListener(v -> takePicture());
+		findViewById(R.getId(this, "switchCamera")).setOnClickListener(v -> {
+			Intent resultIntent = new Intent();
 
-		mTextureView = findViewById(R.id.texture);
+			if (saveFileUri == null) {
+				Uri fileUri = Uri.fromFile(mFile);
+				resultIntent.setData(fileUri);
+			}
+			setResult(Activity.RESULT_OK, resultIntent);
+			finish();
+		});
+		findViewById(R.getId(this, "pictureAccept")).setOnClickListener(v -> {
+			Context context = v.getContext();
+			findViewById(R.getId(context, "cameraPreview")).setVisibility(View.VISIBLE);
+			findViewById(R.getId(context, "picturePreview")).setVisibility(View.GONE);
+			AppCompatImageView imageViewCompat = findViewById(R.getId(context, "picture"));
+			imageViewCompat.setImageDrawable(null);
+			openCamera(mTextureView.getWidth(), mTextureView.getHeight());
+		});
+		findViewById(R.getId(this, "pictureRepeat")).setOnClickListener(v -> {
+			showBackCamera = !showBackCamera;
+			closeCamera();
+			openCamera(mTextureView.getWidth(), mTextureView.getHeight());
+		});
+
+		mTextureView = findViewById(R.getId(this, "texture"));
 
 		mFile = new File(getExternalFilesDir(null), "pic.jpg");
 
@@ -897,39 +919,6 @@ public class SingleCameraActivity extends AppCompatActivity implements View.OnCl
 		}
 	}
 
-	@Override
-	public void onClick(View view) {
-		switch (view.getId()) {
-			case R.id.picture:
-				takePicture();
-				break;
-			case R.id.pictureAccept:
-				Intent resultIntent = new Intent();
-
-				if (saveFileUri == null) {
-					Uri fileUri = Uri.fromFile(mFile);
-					resultIntent.setData(fileUri);
-				}
-				setResult(Activity.RESULT_OK, resultIntent);
-				finish();
-				break;
-			case R.id.pictureRepeat:
-				findViewById(R.id.cameraPreview).setVisibility(View.VISIBLE);
-				findViewById(R.id.picturePreview).setVisibility(View.GONE);
-				AppCompatImageView imageViewCompat = findViewById(R.id.picture);
-				imageViewCompat.setImageDrawable(null);
-				openCamera(mTextureView.getWidth(), mTextureView.getHeight());
-				break;
-			case R.id.switchCamera:
-				showBackCamera = !showBackCamera;
-				closeCamera();
-				openCamera(mTextureView.getWidth(), mTextureView.getHeight());
-				break;
-			default:
-				Log.w(TAG, "Unkown id " + view.getId());
-		}
-	}
-
 	private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
 		if (mFlashSupported) {
 			requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
@@ -983,7 +972,6 @@ public class SingleCameraActivity extends AppCompatActivity implements View.OnCl
 
 	}
 
-	@RequiresApi(api = Build.VERSION_CODES.M)
 	private void requestCameraPermission() {
 		if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
 			new ConfirmationDialog().show(getSupportFragmentManager(), FRAGMENT_DIALOG);

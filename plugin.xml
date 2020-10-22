@@ -98,11 +98,10 @@
         </config-file>
 
         <source-file src="src/android/AutoFitTextureView.java" target-dir="src/org/apache/cordova/mediacapture" />
-        <source-file src="src/android/CameraFragment.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/Capture.java" target-dir="src/org/apache/cordova/mediacapture" />
-        <source-file src="src/android/CaptureActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/PendingRequests.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/R.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/SingleCameraActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
 
         <resource-file src="src/android/res/drawable/mediacap_capture.xml" target="res/drawable/mediacap_capture.xml"/>
@@ -111,7 +110,7 @@
         <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
 
         <resource-file src="src/android/res/layout/camera_activity.xml" target="res/layout/camera_activity.xml"/>
-        <resource-file src="src/android/res/layout/camera_layout.xml" target="src/android/res/layout/camera_layout.xml"/>
+        <resource-file src="src/android/res/layout/camera_layout.xml" target="res/layout/camera_layout.xml"/>
 
         <js-module src="www/android/init.js" name="init">
             <runs />

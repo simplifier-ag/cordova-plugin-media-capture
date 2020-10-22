@@ -12,9 +12,9 @@ public class CaptureActivity extends AppCompatActivity {
         setContentView(getResources().getIdentifier("camera_activity", "layout", getPackageName()));
         if (savedInstanceState == null && getIntent() != null && getIntent().getAction() != null) {
             if (getIntent().getAction().equals(MediaStore.ACTION_IMAGE_CAPTURE)) {
-                getSupportFragmentManager().beginTransaction()
-                        .replace(getResources().getIdentifier("container", "id", getPackageName()), CameraFragment.newInstance())
-                        .commit();
+                //getSupportFragmentManager().beginTransaction()
+                //        .replace(getResources().getIdentifier("container", "id", getPackageName()), CameraFragment.newInstance())
+                //        .commit();
             } else if (getIntent().getAction().equals(MediaStore.ACTION_VIDEO_CAPTURE)) {
                 //TODO Record video
             }
