@@ -459,6 +459,11 @@ public class SingleCameraActivity extends AppCompatActivity {
 
 		findViewById(R.getId(this, "picture")).setOnClickListener(v -> takePicture());
 		findViewById(R.getId(this, "switchCamera")).setOnClickListener(v -> {
+			showBackCamera = !showBackCamera;
+			closeCamera();
+			openCamera(mTextureView.getWidth(), mTextureView.getHeight());
+		});
+		findViewById(R.getId(this, "pictureAccept")).setOnClickListener(v -> {
 			Intent resultIntent = new Intent();
 
 			if (saveFileUri == null) {
@@ -468,17 +473,12 @@ public class SingleCameraActivity extends AppCompatActivity {
 			setResult(Activity.RESULT_OK, resultIntent);
 			finish();
 		});
-		findViewById(R.getId(this, "pictureAccept")).setOnClickListener(v -> {
+		findViewById(R.getId(this, "pictureRepeat")).setOnClickListener(v -> {
 			Context context = v.getContext();
 			findViewById(R.getId(context, "cameraPreview")).setVisibility(View.VISIBLE);
 			findViewById(R.getId(context, "picturePreview")).setVisibility(View.GONE);
-			AppCompatImageView imageViewCompat = findViewById(R.getId(context, "picture"));
+			AppCompatImageView imageViewCompat = findViewById(R.getId(context, "capturedImageView"));
 			imageViewCompat.setImageDrawable(null);
-			openCamera(mTextureView.getWidth(), mTextureView.getHeight());
-		});
-		findViewById(R.getId(this, "pictureRepeat")).setOnClickListener(v -> {
-			showBackCamera = !showBackCamera;
-			closeCamera();
 			openCamera(mTextureView.getWidth(), mTextureView.getHeight());
 		});
 
