@@ -268,7 +268,9 @@ public class Capture extends CordovaPlugin {
             }
         } else {
             // Save the number of images currently on disk for later
-            this.numPics = queryImgDB(whichContentStore()).getCount();
+            Cursor cursor = queryImgDB(whichContentStore());
+            this.numPics = cursor.getCount();
+            cursor.close();
 
             Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
             //Intent intent = new Intent(cordova.getContext(), CaptureActivity.class);
@@ -526,6 +528,7 @@ public class Capture extends CordovaPlugin {
             Uri uri = Uri.parse(contentStore + "/" + id);
             this.cordova.getActivity().getContentResolver().delete(uri, null, null);
         }
+        cursor.close();
     }
 
     /**
