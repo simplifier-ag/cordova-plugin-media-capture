@@ -8,9 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -40,7 +38,6 @@ import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
-import android.support.media.ExifInterface;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.AppCompatImageButton;
 import android.support.v7.widget.AppCompatImageView;
@@ -57,7 +54,6 @@ import android.widget.Toast;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.io.IOException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -254,93 +250,31 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 			mCapturedImage = false;
 
+			ImageSaver.Callback callback = new ImageSaver.Callback() {
+				@Override
+				public void onSuccess(@Nullable Bitmap bitmap) {
+					runOnUiThread(() -> {
+						mCameraPreviewLayout.setVisibility(View.GONE);
+						mPicturePreviewLayout.setVisibility(View.VISIBLE);
+						mCapturedImageView.setImageBitmap(bitmap);
+					});
+				}
+
+				@Override
+				public void onFailure(Throwable t) {
+					Log.e(TAG, "Failed saving image", t);
+				}
+			};
+
 			if (mSaveFileUri == null) {
-				mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile, new ImageSaver.Callback() {
-					@Override
-					public void onSuccess() {
-						runOnUiThread(() -> {
-							mCameraPreviewLayout.setVisibility(View.GONE);
-							mPicturePreviewLayout.setVisibility(View.VISIBLE);
-
-							if (mFile.exists()) {
-								Bitmap bitmap = BitmapFactory.decodeFile(mFile.getAbsolutePath());
-								mCapturedImageView.setImageBitmap(bitmap);
-							}
-						});
-					}
-
-					@Override
-					public void onFailure(Throwable t) {
-						Log.e(TAG, "Failed saving image", t);
-					}
-				}));
+				mBackgroundHandler.post(
+						new ImageSaver(reader.acquireNextImage(), mFile, callback));
 			} else {
-				mBackgroundHandler.post(new ImageSaver(CaptureImageActivity.this, reader.acquireNextImage(), mSaveFileUri, new ImageSaver.Callback() {
-					@Override
-					public void onSuccess() {
-						runOnUiThread(() -> {
-							mCameraPreviewLayout.setVisibility(View.GONE);
-							mPicturePreviewLayout.setVisibility(View.VISIBLE);
-
-							String[] filePath = {MediaStore.Images.Media.DATA};
-							Cursor cursor = getContentResolver().query(mSaveFileUri, filePath, null, null, null);
-
-							if (cursor == null) {
-								Log.w(TAG, "Cursor of content resolver is null");
-								mCapturedImageView.setImageBitmap(null);
-								return;
-							}
-
-							cursor.moveToFirst();
-							String imagePath = cursor.getString(cursor.getColumnIndex(filePath[0]));
-
-							Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
-
-							try {
-								//Samsung devices shows images rotated when image captured in portrait mode
-								ExifInterface exif = new ExifInterface(imagePath);
-								int rotation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-								int rotationDegrees = exifToDegrees(rotation);
-
-								if (rotationDegrees != 0) {
-									Matrix matrix = new Matrix();
-									matrix.preRotate(rotationDegrees);
-									bitmap = Bitmap.createBitmap(bitmap, 0, 0,
-											bitmap.getWidth(),
-											bitmap.getHeight(),
-											matrix,
-											true);
-								}
-
-							} catch (IOException e) {
-								Log.e(TAG, "Could not read exif data from image", e);
-							}
-
-							mCapturedImageView.setImageBitmap(bitmap);
-
-							cursor.close();
-						});
-					}
-
-					@Override
-					public void onFailure(Throwable t) {
-						Log.e(TAG, "Failed saving image", t);
-					}
-				}));
+				mBackgroundHandler.post(
+						new ImageSaver(CaptureImageActivity.this, reader.acquireNextImage(), mSaveFileUri, callback));
 			}
 		}
 	};
-
-	private int exifToDegrees(int exifOrientation) {
-		if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) {
-			return 90;
-		} else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_180) {
-			return 180;
-		} else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_270) {
-			return 270;
-		}
-		return 0;
-	}
 
 	/**
 	 * {@link CaptureRequest.Builder} for the camera preview
@@ -414,7 +348,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 					if (afState == null) {
 						captureStillPicture();
 					} else if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState ||
-							CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState) {
+							CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState ||
+							CaptureResult.CONTROL_AF_STATE_INACTIVE == afState) {
 						// CONTROL_AE_STATE can be null on some devices
 						Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
 						if (aeState == null ||

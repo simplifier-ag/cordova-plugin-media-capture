@@ -1,8 +1,16 @@
 package org.apache.cordova.mediacapture;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.media.Image;
 import android.net.Uri;
+import android.provider.MediaStore;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.io.File;
@@ -11,6 +19,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+@SuppressLint("LogNotTimber")
 public class ImageSaver implements Runnable {
 	private final String TAG = ImageSaver.class.getSimpleName();
 
@@ -35,10 +44,10 @@ public class ImageSaver implements Runnable {
 	}
 
 	ImageSaver(Context context, Image image, Uri uri, ImageSaver.Callback callback) {
+		mContext = context;
 		mImage = image;
 		mUri = uri;
 		mCallback = callback;
-		mContext = context;
 	}
 
 	@Override
@@ -71,12 +80,69 @@ public class ImageSaver implements Runnable {
 			}
 		}
 
-		if (success)
-			mCallback.onSuccess();
+		if (!success)
+			return;
+
+		if (mUri != null) {
+			String[] filePath = {MediaStore.Images.Media.DATA};
+			Cursor cursor = mContext.getContentResolver().query(mUri, filePath, null, null, null);
+
+			if (cursor == null) {
+				Log.w(TAG, "Cursor of content resolver is null");
+				mCallback.onSuccess(null);
+				return;
+			}
+
+			cursor.moveToFirst();
+			String imagePath = cursor.getString(cursor.getColumnIndex(filePath[0]));
+			cursor.close();
+
+			mCallback.onSuccess(getRotatedBitmap(imagePath));
+		} else {
+			mCallback.onSuccess(getRotatedBitmap(mFile.getAbsolutePath()));
+		}
+	}
+
+	private Bitmap getRotatedBitmap(String imagePath) {
+		Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+
+		ExifInterface exif;
+
+		try {
+			exif = new ExifInterface(imagePath);
+		} catch (IOException e) {
+			Log.e(TAG, "Failed receiving ExIf metadata", e);
+			return bitmap;
+		}
+		int rotation = exif.getAttributeInt(android.support.media.ExifInterface.TAG_ORIENTATION, android.support.media.ExifInterface.ORIENTATION_NORMAL);
+		int rotationDegrees = exifToDegrees(rotation);
+
+		if (rotationDegrees != 0) {
+			Matrix matrix = new Matrix();
+			matrix.preRotate(rotationDegrees);
+			bitmap = Bitmap.createBitmap(bitmap, 0, 0,
+					bitmap.getWidth(),
+					bitmap.getHeight(),
+					matrix,
+					true);
+		}
+
+		return bitmap;
+	}
+
+	private int exifToDegrees(int exifOrientation) {
+		if (exifOrientation == android.support.media.ExifInterface.ORIENTATION_ROTATE_90) {
+			return 90;
+		} else if (exifOrientation == android.support.media.ExifInterface.ORIENTATION_ROTATE_180) {
+			return 180;
+		} else if (exifOrientation == android.support.media.ExifInterface.ORIENTATION_ROTATE_270) {
+			return 270;
+		}
+		return 0;
 	}
 
 	public interface Callback {
-		void onSuccess();
+		void onSuccess(@Nullable Bitmap bitmap);
 		void onFailure(Throwable t);
 	}
 }
