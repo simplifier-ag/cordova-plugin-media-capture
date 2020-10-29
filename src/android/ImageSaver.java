@@ -64,6 +64,10 @@ public class ImageSaver implements Runnable {
 				output = new FileOutputStream(mFile);
 			}
 
+			if (output == null) {
+				throw new IOException("Could not open OutputStream");
+			}
+
 			output.write(bytes);
 		} catch (IOException e) {
 			success = false;
@@ -75,7 +79,7 @@ public class ImageSaver implements Runnable {
 				try {
 					output.close();
 				} catch (IOException e) {
-					Log.e(TAG, "Error while closing outputstream", e);
+					Log.e(TAG, "Error while closing OutputStream", e);
 				}
 			}
 		}

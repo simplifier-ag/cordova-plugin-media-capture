@@ -199,14 +199,36 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mCameraDevice = null;
 		}
 
+		@SuppressLint("DefaultLocale")
 		@Override
 		public void onError(@NonNull CameraDevice cameraDevice, int error) {
+			String msg;
+			switch (error) {
+				case CameraDevice.StateCallback.ERROR_CAMERA_IN_USE:
+					msg = String.format("Error code %d - Camera device already in use", error);
+					break;
+				case CameraDevice.StateCallback.ERROR_MAX_CAMERAS_IN_USE:
+					msg = String.format("Error code %d - Too many open cameras", error);
+					break;
+				case CameraDevice.StateCallback.ERROR_CAMERA_DISABLED:
+					msg = String.format("Error code %d - Could not open camera due to a device policy", error);
+					break;
+				case CameraDevice.StateCallback.ERROR_CAMERA_DEVICE:
+					msg = String.format("Error code %d - Camera device encountered a fatal camera error", error);
+					break;
+				case CameraDevice.StateCallback.ERROR_CAMERA_SERVICE:
+					msg = String.format("Error code %d - Camera service encountered a fatal camera error", error);
+					break;
+				default:
+					msg = String.format("Error code %d - Unknown error", error);
+			}
+			Log.e(TAG, msg);
+			showToast(msg);
 			mCameraOpenCloseLock.release();
 			cameraDevice.close();
 			mCameraDevice = null;
 			finish();
 		}
-
 	};
 
 	/**
@@ -263,6 +285,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				@Override
 				public void onFailure(Throwable t) {
 					Log.e(TAG, "Failed saving image", t);
+					showErrorDialog(String.format("Failed saving image.\n%s", t.getMessage()));
 				}
 			};
 
@@ -311,6 +334,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	/**
 	 * Indicator if camera shall facing front or back
 	 */
+	//TODO Cycle - Front, Back, Unknown
 	private boolean mShowBackCamera = true;
 
 	/**
@@ -389,14 +413,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		try {
-			Class.forName("dalvik.system.CloseGuard")
-					.getMethod("setEnabled", boolean.class)
-					.invoke(null, true);
-		} catch (ReflectiveOperationException e) {
-			throw new RuntimeException(e);
-		}
-
 		setContentView(getResources().getIdentifier("camera_layout", "layout", getPackageName()));
 
 		mCameraPreviewLayout = findViewById(R.getId(this, "cameraPreview"));
@@ -411,13 +427,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		AppCompatImageButton pictureRepeatButton = findViewById(R.getId(this, "pictureRepeat"));
 
 		mChangeFlashModeButton.setOnClickListener(v -> {
-			CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-
-			if (manager == null || mCameraId == null) {
-				showErrorDialog("Camera Error");
-				return;
-			}
-
 			mUseFlash = !mUseFlash;
 
 			mChangeFlashModeButton.setImageResource(R.getDrawable(v.getContext(),
@@ -455,6 +464,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			openCamera(mCameraPreviewTexture.getWidth(), mCameraPreviewTexture.getHeight());
 		});
 
+		//TODO Pinch to zoom
 		mCameraPreviewTexture.setOnTouchListener(this);
 
 		if (getIntent() != null && getIntent().getExtras() != null
@@ -543,7 +553,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				// Find out if we need to swap dimension to get the preview size relative to sensor
 				// coordinate.
 				int displayRotation = getWindowManager().getDefaultDisplay().getRotation();
-				mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+				Integer sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+				mSensorOrientation = sensorOrientation != null ? sensorOrientation : 0;
 				boolean swappedDimensions = false;
 				switch (displayRotation) {
 					case Surface.ROTATION_0:
@@ -619,6 +630,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			}
 		} catch (CameraAccessException e) {
 			Log.e(TAG, "Setting camera outputs failed", e);
+			showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
 		}
 	}
 
@@ -648,10 +660,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			}
 
 			manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
-		} catch (CameraAccessException e) {
+		} catch (Exception e) {
 			Log.e(TAG, "Failed opening camera", e);
-		} catch (InterruptedException e) {
-			throw new RuntimeException("Interrupted while trying to lock camera opening.", e);
+			showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
 		}
 	}
 
@@ -675,7 +686,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			}
 		} catch (InterruptedException e) {
 			Log.e(TAG, "Failed closing camera", e);
-			throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
+			showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
 		} finally {
 			mCameraOpenCloseLock.release();
 		}
@@ -755,7 +766,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 						@Override
 						public void onConfigureFailed(
 								@NonNull CameraCaptureSession cameraCaptureSession) {
-							showToast("Failed");
+							Log.e(TAG, "Configuration failed");
+							showToast("Failed showing preview");
+							finish();
 						}
 					}, null
 			);
@@ -916,6 +929,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	}
 
 	private void setFlashMode(CaptureRequest.Builder requestBuilder) {
+		//TODO Add all flash modes (red eye, auto)
 		if (mFlashSupported) {
 			if (mUseFlash) {
 				requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
@@ -955,7 +969,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 			if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
 				new AlertDialog.Builder(CaptureImageActivity.this)
-						.setMessage("Error requesting permission") //TODO Show a better message
+						.setMessage("Error requesting permission")
 						.setPositiveButton(android.R.string.ok, (dialog, which) ->
 								CaptureImageActivity.this.requestPermissions(new String[]{Manifest.permission.CAMERA},
 										REQUEST_CAMERA_PERMISSION))
