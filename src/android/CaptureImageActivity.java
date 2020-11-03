@@ -732,7 +732,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			Surface surface = new Surface(texture);
 
 			// We set up a CaptureRequest.Builder with the output Surface.
-			mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+			mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 			mPreviewRequestBuilder.addTarget(surface);
 
 			// Here, we create a CameraCaptureSession for camera preview.
@@ -905,15 +905,11 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 							session.getDevice().getId(), result.getFrameNumber()));
 					unlockFocus();
 				}
+
 				@Override
 				public void onCaptureFailed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureFailure failure) {
 					super.onCaptureFailed(session, request, failure);
 					LOG.e(TAG, String.valueOf(failure.getReason()));
-				}
-
-				@Override
-				public void onCaptureFailed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureFailure failure) {
-					LOG.e(TAG, String.format("onCaptureFailed - Device ID: %s | failed frameNumber: %s",session.getDevice(),failure.getFrameNumber()), failure);
 				}
 			};
 
