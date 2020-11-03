@@ -21,6 +21,7 @@ package org.apache.cordova.mediacapture;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -30,7 +31,6 @@ import android.database.Cursor;
 import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -248,6 +248,10 @@ public class Capture extends CordovaPlugin {
         return cache.getAbsolutePath();
     }
 
+    //TODO add cdv api option to specify target activity. implicit intents (w/o class name) will
+    // always call system camera starting from android 11
+    // (see https://developer.android.com/about/versions/11/behavior-changes-11#camera)
+
     /**
      * Sets up an intent to capture images.  Result handled by onActivityResult()
      */
@@ -273,7 +277,6 @@ public class Capture extends CordovaPlugin {
             cursor.close();
 
             Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-            //Intent intent = new Intent(cordova.getContext(), CaptureActivity.class);
 
             ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
             ContentValues cv = new ContentValues();
@@ -283,7 +286,10 @@ public class Capture extends CordovaPlugin {
 
             intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, imageUri);
 
-            this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
+            //enable activity's intent filter to appear in camera app chooser dialog
+            setActivityEnabled(this.cordova.getActivity(), CaptureImageActivity.class.getCanonicalName(),true);
+
+            this.cordova.startActivityForResult(this, intent, req.requestCode);
         }
     }
 
@@ -291,7 +297,8 @@ public class Capture extends CordovaPlugin {
      * Sets up an intent to capture video.  Result handled by onActivityResult()
      */
     private void captureVideo(Request req) {
-        //TODO check if more permission requests are required (audio)
+        boolean needRecordAudioPermission =
+                !PermissionHelper.hasPermission(this, Manifest.permission.RECORD_AUDIO);
         boolean needExternalStoragePermission =
                 !PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
         boolean needCameraPermission = cameraPermissionInManifest &&
@@ -299,23 +306,13 @@ public class Capture extends CordovaPlugin {
         boolean needWriteExternalStoragePermission =
                 !PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
-        if (needWriteExternalStoragePermission || needExternalStoragePermission || needCameraPermission) {
-            if (needExternalStoragePermission && needCameraPermission && needWriteExternalStoragePermission) {
-                PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE});
-            } else if (needExternalStoragePermission) {
-                PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
-            } else if (needCameraPermission) {
-                PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.CAMERA);
-            } else {
-                PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            }
+        if (needExternalStoragePermission || needWriteExternalStoragePermission || needRecordAudioPermission || needCameraPermission) {
+            PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA});
         } else {
             Intent intent = new Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE);
 
-            if (Build.VERSION.SDK_INT > 7) {
-                intent.putExtra("android.intent.extra.durationLimit", req.duration);
-                intent.putExtra("android.intent.extra.videoQuality", req.quality);
-            }
+            intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, req.duration);
+            intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, req.quality);
             this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
         }
     }
@@ -331,6 +328,11 @@ public class Capture extends CordovaPlugin {
      */
     public void onActivityResult(int requestCode, int resultCode, final Intent intent) {
         final Request req = pendingRequests.get(requestCode);
+
+        if(CAPTURE_IMAGE == req.action){
+            //disable ImageActivity alias to prevent other apps using this one
+            setActivityEnabled(this.cordova.getActivity(), CaptureImageActivity.class.getCanonicalName(), false);
+        }
 
         // Result received okay
         if (resultCode == Activity.RESULT_OK) {
@@ -584,5 +586,30 @@ public class Capture extends CordovaPlugin {
 
     public void onRestoreStateForActivityResult(Bundle state, CallbackContext callbackContext) {
         pendingRequests.setLastSavedState(state, callbackContext);
+    }
+
+    /**
+     * Enables/Disables activity image . Default is disabled. Prevents other apps to call the
+     * activity but enabling it before calling startActivity will cause android to make it choosable by user
+     * @param activity activity containing the target package
+     * @param enabled sets activity android:enabled for CaptureImageActivity (default false)
+     */
+    public static void setActivityEnabled(Activity activity, String targetActivity, boolean enabled){
+        String packageName = activity.getPackageName();
+        PackageManager pm = activity.getApplicationContext().getPackageManager();
+
+        ComponentName cameraActivityAlias = new ComponentName(packageName, targetActivity);
+        if(enabled){
+            pm.setComponentEnabledSetting(
+                    cameraActivityAlias,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP);
+        } else {
+            pm.setComponentEnabledSetting(
+                    cameraActivityAlias,
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP);
+        }
+        LOG.i(LOG_TAG, String.format("%s %s", enabled ? "enabled" : "disabled", cameraActivityAlias));
     }
 }

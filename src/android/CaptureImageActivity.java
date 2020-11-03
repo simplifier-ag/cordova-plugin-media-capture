@@ -521,6 +521,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				CameraCharacteristics characteristics
 						= manager.getCameraCharacteristics(cameraId);
 
+				Integer deviceLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL); // 0 - limited, 1 - full, 2 - legacy, 3 - uber full
+				LOG.v(TAG, String.format("Camera hardware level: %s", deviceLevel));
+
 				// We don't use a front facing camera in this sample.
 				Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
 				if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT && showBackCamera) {
@@ -729,7 +732,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			Surface surface = new Surface(texture);
 
 			// We set up a CaptureRequest.Builder with the output Surface.
-			mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+			mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
 			mPreviewRequestBuilder.addTarget(surface);
 
 			// Here, we create a CameraCaptureSession for camera preview.
@@ -757,8 +760,10 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 								mPreviewRequest = mPreviewRequestBuilder.build();
 								mCaptureSession.setRepeatingRequest(mPreviewRequest,
 										mCaptureCallback, mBackgroundHandler);
-							} catch (CameraAccessException e) {
+							} catch (Exception e) {
 								LOG.e(TAG, "Previewing camera session failed", e);
+								showToast("Failed showing preview");
+								surface.release();
 							}
 						}
 
@@ -767,6 +772,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 								@NonNull CameraCaptureSession cameraCaptureSession) {
 							LOG.e(TAG, "Configuration failed");
 							showToast("Failed showing preview");
+							surface.release();
 							finish();
 						}
 					}, null
@@ -873,16 +879,41 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
 
 			CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
+
+				@Override
+				public void onCaptureStarted(@NonNull CameraCaptureSession session,
+											 @NonNull CaptureRequest request,
+											 long timestamp,
+											 long frameNumber) {
+					LOG.v(TAG, String.format("onCaptureStarted - Device ID: %s | timestamp: %s | frameNumber: %s",
+							session.getDevice().getId(), timestamp, frameNumber));
+				}
+
+				@Override
+				public void onCaptureProgressed(@NonNull CameraCaptureSession session,
+												@NonNull CaptureRequest request,
+												@NonNull CaptureResult partialResult) {
+					LOG.v(TAG, String.format("onCaptureProgressed - Device ID: %s | partial frameNumber: %s",
+							session.getDevice().getId(), partialResult.getFrameNumber()));
+				}
+
 				@Override
 				public void onCaptureCompleted(@NonNull CameraCaptureSession session,
 				                               @NonNull CaptureRequest request,
 				                               @NonNull TotalCaptureResult result) {
+					LOG.v(TAG, String.format("onCaptureCompleted - Device ID: %s | result frameNumber: %s",
+							session.getDevice().getId(), result.getFrameNumber()));
 					unlockFocus();
 				}
 				@Override
 				public void onCaptureFailed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureFailure failure) {
 					super.onCaptureFailed(session, request, failure);
 					LOG.e(TAG, String.valueOf(failure.getReason()));
+				}
+
+				@Override
+				public void onCaptureFailed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureFailure failure) {
+					LOG.e(TAG, String.format("onCaptureFailed - Device ID: %s | failed frameNumber: %s",session.getDevice(),failure.getFrameNumber()), failure);
 				}
 			};
 
@@ -946,7 +977,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		if (fpsRange != null) {
 			requestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fpsRange);
 		}
-
 	}
 
 	/**
