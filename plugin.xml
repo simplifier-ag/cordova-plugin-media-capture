@@ -85,11 +85,12 @@
 
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <activity
-                android:name="org.apache.cordova.mediacapture.CaptureImageActivity"
-                android:launchMode="singleTop"
-                android:excludeFromRecents="true"
-                android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-                android:theme="@style/Theme.AppCompat.NoActionBar">
+            android:name="org.apache.cordova.mediacapture.CaptureImageActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
+            android:enabled="false">
                 <intent-filter>
                     <action android:name="android.media.action.IMAGE_CAPTURE" />
                     <category android:name="android.intent.category.DEFAULT" />

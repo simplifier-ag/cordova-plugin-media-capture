@@ -27,6 +27,7 @@ import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
 import android.media.ImageReader;
 import android.net.Uri;
 import android.os.Build;
@@ -41,7 +42,6 @@ import android.support.constraint.ConstraintLayout;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.AppCompatImageButton;
 import android.support.v7.widget.AppCompatImageView;
-import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.MotionEvent;
@@ -51,6 +51,7 @@ import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import org.apache.cordova.LOG;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -222,7 +223,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				default:
 					msg = String.format("Error code %d - Unknown error", error);
 			}
-			Log.e(TAG, msg);
+			LOG.e(TAG, msg);
 			showToast(msg);
 			mCameraOpenCloseLock.release();
 			cameraDevice.close();
@@ -265,12 +266,14 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 		@Override
 		public void onImageAvailable(ImageReader reader) {
-			mCameraDevice.close();
 
-			if (!mCapturedImage)
+			Image image = reader.acquireNextImage();
+
+			if (image == null)
+			// No image available so continue
 				return;
 
-			mCapturedImage = false;
+			mCameraDevice.close();
 
 			ImageSaver.Callback callback = new ImageSaver.Callback() {
 				@Override
@@ -284,17 +287,17 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 				@Override
 				public void onFailure(Throwable t) {
-					Log.e(TAG, "Failed saving image", t);
+					LOG.e(TAG, "Failed saving image", t);
 					showErrorDialog(String.format("Failed saving image.\n%s", t.getMessage()));
 				}
 			};
 
 			if (mSaveFileUri == null) {
 				mBackgroundHandler.post(
-						new ImageSaver(reader.acquireNextImage(), mFile, callback));
+						new ImageSaver(image, mFile, callback));
 			} else {
 				mBackgroundHandler.post(
-						new ImageSaver(CaptureImageActivity.this, reader.acquireNextImage(), mSaveFileUri, callback));
+						new ImageSaver(CaptureImageActivity.this, image, mSaveFileUri, callback));
 			}
 		}
 	};
@@ -522,6 +525,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				CameraCharacteristics characteristics
 						= manager.getCameraCharacteristics(cameraId);
 
+				Integer deviceLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL); // 0 - limited, 1 - full, 2 - legacy, 3 - uber full
+				LOG.v(TAG, String.format("Camera hardware level: %s", deviceLevel));
+
 				// We don't use a front facing camera in this sample.
 				Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
 				if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT && showBackCamera) {
@@ -570,7 +576,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 						}
 						break;
 					default:
-						Log.e(TAG, "Display rotation is invalid: " + displayRotation);
+						LOG.e(TAG, "Display rotation is invalid: " + displayRotation);
 				}
 
 				Point displaySize = new Point();
@@ -617,7 +623,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 					Boolean available = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
 					mFlashSupported = available == null ? false : available;
 				} else {
-					Log.w(TAG, "Torch mode is unavailable");
+					LOG.w(TAG, "Torch mode is unavailable");
 					mFlashSupported = false;
 				}
 
@@ -629,7 +635,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				return;
 			}
 		} catch (CameraAccessException e) {
-			Log.e(TAG, "Setting camera outputs failed", e);
+			LOG.e(TAG, "Setting camera outputs failed", e);
 			showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
 		}
 	}
@@ -661,7 +667,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 			manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
 		} catch (Exception e) {
-			Log.e(TAG, "Failed opening camera", e);
+			LOG.e(TAG, "Failed opening camera", e);
 			showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
 		}
 	}
@@ -685,7 +691,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				mImageReader = null;
 			}
 		} catch (InterruptedException e) {
-			Log.e(TAG, "Failed closing camera", e);
+			LOG.e(TAG, "Failed closing camera", e);
 			showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
 		} finally {
 			mCameraOpenCloseLock.release();
@@ -711,7 +717,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mBackgroundThread = null;
 			mBackgroundHandler = null;
 		} catch (InterruptedException e) {
-			Log.e(TAG, "stopping background thread failed", e);
+			LOG.e(TAG, "stopping background thread failed", e);
 		}
 	}
 
@@ -730,7 +736,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			Surface surface = new Surface(texture);
 
 			// We set up a CaptureRequest.Builder with the output Surface.
-			mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+			mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
 			mPreviewRequestBuilder.addTarget(surface);
 
 			// Here, we create a CameraCaptureSession for camera preview.
@@ -758,24 +764,25 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 								mPreviewRequest = mPreviewRequestBuilder.build();
 								mCaptureSession.setRepeatingRequest(mPreviewRequest,
 										mCaptureCallback, mBackgroundHandler);
-							} catch (CameraAccessException e) {
-								Log.e(TAG, "Previewing camera session failed", e);
+							} catch (Exception e) {
+								LOG.e(TAG, "Previewing camera session failed", e);
+								showToast("Failed showing preview");
+								surface.release();
 							}
 						}
 
 						@Override
 						public void onConfigureFailed(
 								@NonNull CameraCaptureSession cameraCaptureSession) {
-							Log.e(TAG, "Configuration failed");
+							LOG.e(TAG, "Configuration failed");
 							showToast("Failed showing preview");
+							surface.release();
 							finish();
 						}
 					}, null
 			);
-
-			surface.release();
 		} catch (CameraAccessException e) {
-			Log.e(TAG, "Failed creating camera preview session", e);
+			LOG.e(TAG, "Failed creating camera preview session", e);
 		}
 	}
 
@@ -831,7 +838,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
 					mBackgroundHandler);
 		} catch (CameraAccessException e) {
-			Log.e(TAG, "Failed locking focus", e);
+			LOG.e(TAG, "Failed locking focus", e);
 		}
 	}
 
@@ -849,7 +856,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
 					mBackgroundHandler);
 		} catch (CameraAccessException e) {
-			Log.e(TAG, "Precapturing failed", e);
+			LOG.e(TAG, "Precapturing failed", e);
 		}
 	}
 
@@ -876,12 +883,37 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
 
 			CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
+
+				@Override
+				public void onCaptureStarted(@NonNull CameraCaptureSession session,
+											 @NonNull CaptureRequest request,
+											 long timestamp,
+											 long frameNumber) {
+					LOG.v(TAG, String.format("onCaptureStarted - Device ID: %s | timestamp: %s | frameNumber: %s",
+							session.getDevice().getId(), timestamp, frameNumber));
+				}
+
+				@Override
+				public void onCaptureProgressed(@NonNull CameraCaptureSession session,
+												@NonNull CaptureRequest request,
+												@NonNull CaptureResult partialResult) {
+					LOG.v(TAG, String.format("onCaptureProgressed - Device ID: %s | partial frameNumber: %s",
+							session.getDevice().getId(), partialResult.getFrameNumber()));
+				}
+
 				@Override
 				public void onCaptureCompleted(@NonNull CameraCaptureSession session,
 				                               @NonNull CaptureRequest request,
 				                               @NonNull TotalCaptureResult result) {
+					LOG.v(TAG, String.format("onCaptureCompleted - Device ID: %s | result frameNumber: %s",
+							session.getDevice().getId(), result.getFrameNumber()));
 					unlockFocus();
 					mCapturedImage = true;
+				}
+
+				@Override
+				public void onCaptureFailed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureFailure failure) {
+					LOG.e(TAG, String.format("onCaptureFailed - Device ID: %s | failed frameNumber: %s",session.getDevice(),failure.getFrameNumber()), failure);
 				}
 			};
 
@@ -889,7 +921,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mCaptureSession.abortCaptures();
 			mCaptureSession.capture(captureBuilder.build(), captureCallback, null);
 		} catch (CameraAccessException e) {
-			Log.e(TAG, "Capturing still picture failed", e);
+			LOG.e(TAG, "Capturing still picture failed", e);
 		}
 	}
 
@@ -924,7 +956,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
 					mBackgroundHandler);
 		} catch (CameraAccessException e) {
-			Log.e(TAG, "Unlocking focus failed", e);
+			LOG.e(TAG, "Unlocking focus failed", e);
 		}
 	}
 
@@ -982,7 +1014,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			}
 		} else {
 			//Source: https://developer.android.com/training/permissions/requesting.html#declare-by-api-level
-			Log.w(TAG, "Permission should be granted. Devices with SDK 22 and lower can't request permissions");
+			LOG.w(TAG, "Permission should be granted. Devices with SDK 22 and lower can't request permissions");
 		}
 	}
 
@@ -1018,7 +1050,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			return false;
 		}
 		if (mManualFocusEngaged) {
-			Log.d(TAG, "Manual focus already engaged");
+			LOG.d(TAG, "Manual focus already engaged");
 			return true;
 		}
 
@@ -1050,7 +1082,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 					try {
 						session.setRepeatingRequest(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
 					} catch (CameraAccessException e) {
-						Log.e(TAG, "Failed triggering focus", e);
+						LOG.e(TAG, "Failed triggering focus", e);
 					}
 				}
 			}
@@ -1060,7 +1092,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			                            @NotNull CaptureRequest request,
 			                            @NotNull CaptureFailure failure) {
 				super.onCaptureFailed(session, request, failure);
-				Log.e(TAG, "Manual AF failure: " + failure);
+				LOG.e(TAG, "Manual AF failure: " + failure);
 				mManualFocusEngaged = false;
 			}
 		};
@@ -1087,7 +1119,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mCaptureSession.capture(mPreviewRequestBuilder.build(), captureCallbackHandler, mBackgroundHandler);
 			mManualFocusEngaged = true;
 		} catch (CameraAccessException e) {
-			Log.e(TAG, "Failed focusing", e);
+			LOG.e(TAG, "Failed focusing", e);
 		}
 
 		return true;
@@ -1152,7 +1184,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		} else if (notBigEnough.size() > 0) {
 			return Collections.max(notBigEnough, new CompareSizesByArea());
 		} else {
-			Log.e(TAG, "Couldn't find any suitable preview size");
+			LOG.e(TAG, "Couldn't find any suitable preview size");
 			return choices[0];
 		}
 	}
