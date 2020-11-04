@@ -342,16 +342,14 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			// No image available so continue, cam unavailable, session got lost
 			if (image == null || mCameraDevice == null || mCaptureSession == null) {
 				LOG.v(TAG, "closing reader");
-				reader.close();
 				return;
 			}
+
 
 			ImageSaver.Callback callback = new ImageSaver.Callback() {
 				@Override
 				public void onSuccess(@Nullable Bitmap bitmap) {
 					runOnUiThread(() -> {
-						reader.close();
-						mCameraDevice.close();
 						mCameraPreviewLayout.setVisibility(View.GONE);
 						mPicturePreviewLayout.setVisibility(View.VISIBLE);
 						mCapturedImageView.setImageBitmap(bitmap);
@@ -360,8 +358,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 				@Override
 				public void onFailure(Throwable t) {
-					reader.close();
-					mCameraDevice.close();
 					LOG.e(TAG, "Failed saving image", t);
 					showErrorDialog(String.format("Failed saving image.\n%s", t.getMessage()));
 				}
@@ -985,6 +981,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 											   @NonNull TotalCaptureResult result) {
 					LOG.v(TAG, String.format("onCaptureCompleted - Device ID: %s | result frameNumber: %s",
 							session.getDevice().getId(), result.getFrameNumber()));
+					unlockFocus();
 				}
 
 				@Override
