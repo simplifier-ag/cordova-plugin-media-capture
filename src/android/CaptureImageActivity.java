@@ -46,9 +46,11 @@ import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.MotionEvent;
+import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
@@ -129,6 +131,21 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	private static final int MAX_PREVIEW_HEIGHT = 1080;
 
 	/**
+	 * Listener for runtime orientation changes
+	*/
+	private OrientationEventListener orientationEventListener;
+
+	/**
+	 * holds current orientation
+	*/
+	private int currentOrientation;
+
+	/**
+	 * hold current rotation
+	*/
+	private int currentRotation;
+
+	/**
 	 * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
 	 * {@link TextureView}.
 	 */
@@ -192,6 +209,17 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mCameraOpenCloseLock.release();
 			mCameraDevice = cameraDevice;
 			createCameraPreviewSession();
+			if( orientationEventListener == null ) {
+				LOG.d(TAG, "create orientationEventListener");
+				orientationEventListener = new OrientationEventListener(CaptureImageActivity.this) {
+					@Override
+					public void onOrientationChanged(int orientation) {
+						LOG.v(TAG, String.format("orientation changed %s", orientation));
+						handleOnOrientationChanged(orientation);
+					}
+				};
+				orientationEventListener.enable();
+			}
 		}
 
 		@Override
@@ -199,6 +227,15 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			mCameraOpenCloseLock.release();
 			cameraDevice.close();
 			mCameraDevice = null;
+		}
+
+		@Override
+		public void onClosed(@NonNull CameraDevice camera) {
+			LOG.v(TAG, String.format("camera closed %s", camera.getId()));
+			if( orientationEventListener != null ) {
+				orientationEventListener.disable();
+				orientationEventListener = null;
+			}
 		}
 
 		@SuppressLint("DefaultLocale")
@@ -232,6 +269,32 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			finish();
 		}
 	};
+
+	private void handleOnOrientationChanged(int orientation) {
+		if( orientation == OrientationEventListener.ORIENTATION_UNKNOWN )
+			return;
+		if( mCameraInfo == null ) {
+			return;
+		}
+		orientation = (orientation + 45) / 90 * 90;
+		this.currentOrientation = orientation % 360;
+		int new_rotation;
+		int camera_orientation = mCameraInfo.get(CameraCharacteristics.SENSOR_ORIENTATION);
+		if( (mCameraInfo.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) ) {
+			new_rotation = (camera_orientation - orientation + 360) % 360;
+		}
+		else {
+			new_rotation = (camera_orientation + orientation) % 360;
+		}
+		if( new_rotation != currentRotation ) {
+			LOG.d(TAG, "    current_orientation is " + currentOrientation);
+			LOG.d(TAG, "    info orientation is " + camera_orientation);
+			LOG.d(TAG, "    set Camera rotation from " + currentRotation + " to " + new_rotation);
+			this.currentRotation = new_rotation;
+		}
+	}
+
+	private void calculateCameraToPreviewMatrix() {}
 
 	/**
 	 * An additional thread for running tasks that shouldn't block the UI.
@@ -275,6 +338,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				return;
 
 			mCameraDevice.close();
+
+			//TODO: read byte buffer for burst mode
+			//TODO: reader closing?
 
 			ImageSaver.Callback callback = new ImageSaver.Callback() {
 				@Override
@@ -686,6 +752,11 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				mImageReader.close();
 				mImageReader = null;
 			}
+			if( orientationEventListener != null ) {
+				LOG.d(TAG, "free orientationEventListener");
+				orientationEventListener.disable();
+				orientationEventListener = null;
+			}
 		} catch (InterruptedException e) {
 			LOG.e(TAG, "Failed closing camera", e);
 			showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
@@ -875,8 +946,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			setFlashMode(captureBuilder);
 
 			// Orientation
-			int rotation = getWindowManager().getDefaultDisplay().getRotation();
-			captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
+			captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getImageVideoRotation());
 
 			CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
 
@@ -1216,5 +1286,27 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		}
 
 		return result;
+	}
+
+	/* Returns the rotation (in degrees) to use for images/videos, taking the preference_lock_orientation into account.
+	 */
+	private int getImageVideoRotation() {
+		LOG.d(TAG, "getImageVideoRotation() from current_rotation " + currentOrientation);
+		return this.currentRotation;
+	}
+
+	private int getDeviceDefaultOrientation() {
+		WindowManager windowManager = (WindowManager)this.getSystemService(Context.WINDOW_SERVICE);
+		Configuration config = getResources().getConfiguration();
+		int rotation = windowManager.getDefaultDisplay().getRotation();
+		if( ( (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) &&
+				config.orientation == Configuration.ORIENTATION_LANDSCAPE )
+				|| ( (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) &&
+				config.orientation == Configuration.ORIENTATION_PORTRAIT ) ) {
+			return Configuration.ORIENTATION_LANDSCAPE;
+		}
+		else {
+			return Configuration.ORIENTATION_PORTRAIT;
+		}
 	}
 }
