@@ -50,10 +50,10 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import org.apache.cordova.BuildConfig;
 import org.apache.cordova.LOG;
 import org.jetbrains.annotations.NotNull;
 
@@ -132,17 +132,17 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 	/**
 	 * Listener for runtime orientation changes
-	*/
+	 */
 	private OrientationEventListener orientationEventListener;
 
 	/**
 	 * holds current orientation
-	*/
+	 */
 	private int currentOrientation;
 
 	/**
 	 * hold current rotation
-	*/
+	 */
 	private int currentRotation;
 
 	/**
@@ -330,22 +330,26 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 		@Override
 		public void onImageAvailable(ImageReader reader) {
-
-			Image image = reader.acquireNextImage();
-
-			if (image == null)
-				// No image available so continue
+			if(reader == null){
 				return;
+			}
 
-			mCameraDevice.close();
+			//TODO: acquireNextImage for burst
 
-			//TODO: read byte buffer for burst mode
-			//TODO: reader closing?
+			Image image = reader.acquireLatestImage();
+			LOG.v(TAG, String.format("onImageAvailable - null: %s, maxImages: %s, format: %s",image == null, reader.getMaxImages(), reader.getImageFormat()));
+
+			// No image available so continue, cam unavailable, session got lost
+			if (image == null && mCameraDevice != null && mCaptureSession != null) {
+				reader.close();
+				return;
+			}
 
 			ImageSaver.Callback callback = new ImageSaver.Callback() {
 				@Override
 				public void onSuccess(@Nullable Bitmap bitmap) {
 					runOnUiThread(() -> {
+						reader.close();
 						mCameraPreviewLayout.setVisibility(View.GONE);
 						mPicturePreviewLayout.setVisibility(View.VISIBLE);
 						mCapturedImageView.setImageBitmap(bitmap);
@@ -354,6 +358,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 				@Override
 				public void onFailure(Throwable t) {
+					reader.close();
 					LOG.e(TAG, "Failed saving image", t);
 					showErrorDialog(String.format("Failed saving image.\n%s", t.getMessage()));
 				}
@@ -414,15 +419,15 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 		@Override
 		public void onCaptureProgressed(@NonNull CameraCaptureSession session,
-		                                @NonNull CaptureRequest request,
-		                                @NonNull CaptureResult partialResult) {
+										@NonNull CaptureRequest request,
+										@NonNull CaptureResult partialResult) {
 			process(partialResult);
 		}
 
 		@Override
 		public void onCaptureCompleted(@NonNull CameraCaptureSession session,
-		                               @NonNull CaptureRequest request,
-		                               @NonNull TotalCaptureResult result) {
+									   @NonNull CaptureRequest request,
+									   @NonNull TotalCaptureResult result) {
 			process(result);
 		}
 
@@ -477,6 +482,10 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		if(BuildConfig.DEBUG){
+			LOG.setLogLevel(LOG.VERBOSE);
+		}
 
 		setContentView(getResources().getIdentifier("camera_layout", "layout", getPackageName()));
 
@@ -969,8 +978,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 				@Override
 				public void onCaptureCompleted(@NonNull CameraCaptureSession session,
-				                               @NonNull CaptureRequest request,
-				                               @NonNull TotalCaptureResult result) {
+											   @NonNull CaptureRequest request,
+											   @NonNull TotalCaptureResult result) {
 					LOG.v(TAG, String.format("onCaptureCompleted - Device ID: %s | result frameNumber: %s",
 							session.getDevice().getId(), result.getFrameNumber()));
 					unlockFocus();
@@ -1062,11 +1071,11 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	 * Shows an error message dialog.
 	 */
 	private void showErrorDialog(String msg) {
-		new AlertDialog.Builder(this)
+		runOnUiThread(() -> new AlertDialog.Builder(CaptureImageActivity.this)
 				.setMessage(msg)
 				.setPositiveButton(android.R.string.ok, (dialog, which) -> finish())
 				.create()
-				.show();
+				.show());
 	}
 
 	private void requestCameraPermission() {
@@ -1092,7 +1101,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 	@Override
 	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-	                                       @NonNull int[] grantResults) {
+										   @NonNull int[] grantResults) {
 		if (requestCode == REQUEST_CAMERA_PERMISSION) {
 			if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
 				showErrorDialog("Error requesting permission");
@@ -1142,8 +1151,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		CameraCaptureSession.CaptureCallback captureCallbackHandler = new CameraCaptureSession.CaptureCallback() {
 			@Override
 			public void onCaptureCompleted(@NotNull CameraCaptureSession session,
-			                               @NotNull CaptureRequest request,
-			                               @NotNull TotalCaptureResult result) {
+										   @NotNull CaptureRequest request,
+										   @NotNull TotalCaptureResult result) {
 				super.onCaptureCompleted(session, request, result);
 				mManualFocusEngaged = false;
 
@@ -1161,8 +1170,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 			@Override
 			public void onCaptureFailed(@NotNull CameraCaptureSession session,
-			                            @NotNull CaptureRequest request,
-			                            @NotNull CaptureFailure failure) {
+										@NotNull CaptureRequest request,
+										@NotNull CaptureFailure failure) {
 				super.onCaptureFailed(session, request, failure);
 				LOG.e(TAG, "Manual AF failure: " + failure);
 				mManualFocusEngaged = false;
@@ -1229,7 +1238,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	 * @return The optimal {@code Size}, or an arbitrary one if none were big enough
 	 */
 	private static Size chooseOptimalSize(Size[] choices, int textureViewWidth,
-	                                      int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
+										  int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
 
 		// Collect the supported resolutions that are at least as big as the preview Surface
 		List<Size> bigEnough = new ArrayList<>();
@@ -1291,22 +1300,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	/* Returns the rotation (in degrees) to use for images/videos, taking the preference_lock_orientation into account.
 	 */
 	private int getImageVideoRotation() {
-		LOG.d(TAG, "getImageVideoRotation() from current_rotation " + currentOrientation);
+		LOG.d(TAG, "getImageVideoRotation() from currentRotation " + currentRotation);
 		return this.currentRotation;
-	}
-
-	private int getDeviceDefaultOrientation() {
-		WindowManager windowManager = (WindowManager)this.getSystemService(Context.WINDOW_SERVICE);
-		Configuration config = getResources().getConfiguration();
-		int rotation = windowManager.getDefaultDisplay().getRotation();
-		if( ( (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) &&
-				config.orientation == Configuration.ORIENTATION_LANDSCAPE )
-				|| ( (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) &&
-				config.orientation == Configuration.ORIENTATION_PORTRAIT ) ) {
-			return Configuration.ORIENTATION_LANDSCAPE;
-		}
-		else {
-			return Configuration.ORIENTATION_PORTRAIT;
-		}
 	}
 }
