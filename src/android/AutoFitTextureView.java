@@ -1,13 +1,16 @@
 package org.apache.cordova.mediacapture;
 
+import android.app.Activity;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.TextureView;
 
+import org.apache.cordova.LOG;
+
 public class AutoFitTextureView extends TextureView {
 
-	private int mRatioWidth = 0;
-	private int mRatioHeight = 0;
+	private float aspectRatio = 0f;
+	private static String TAG = AutoFitTextureView.class.getCanonicalName();
 
 	public AutoFitTextureView(Context context) {
 		this(context, null);
@@ -29,12 +32,13 @@ public class AutoFitTextureView extends TextureView {
 	 * @param width  Relative horizontal size
 	 * @param height Relative vertical size
 	 */
-	public void setAspectRatio(int width, int height) {
+	public void setAspectRatio(int width, int height, int textureOrientation, Activity activity) {
+		LOG.v(TAG, String.format("setAspectRatio - width: %s, height: %s, orientation: %s", width, height, textureOrientation));
 		if (width < 0 || height < 0) {
 			throw new IllegalArgumentException("Size cannot be negative.");
 		}
-		mRatioWidth = width;
-		mRatioHeight = height;
+
+		aspectRatio = (float) width / (float) height;
 		requestLayout();
 	}
 
@@ -43,14 +47,23 @@ public class AutoFitTextureView extends TextureView {
 		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 		int width = MeasureSpec.getSize(widthMeasureSpec);
 		int height = MeasureSpec.getSize(heightMeasureSpec);
-		if (mRatioWidth == 0 || mRatioHeight == 0) {
+		LOG.v(TAG, String.format("onMeasure - width: %s, height: %s", width, height));
+		if(aspectRatio == 0f){
 			setMeasuredDimension(width, height);
 		} else {
-			if (width < (height * mRatioWidth / mRatioHeight)) {
-				setMeasuredDimension(width, width * mRatioHeight / mRatioWidth);
+			int newWidth;
+			int newHeight;
+			float actualRatio = width > height ? aspectRatio : 1f /aspectRatio;
+			if(width > height * actualRatio){
+				newHeight = height;
+				newWidth = Math.round(height * actualRatio);
 			} else {
-				setMeasuredDimension(height * mRatioWidth / mRatioHeight, height);
+				newWidth  = width;
+				newHeight = Math.round(width / actualRatio);
 			}
+
+			LOG.v(TAG, String.format("Measured dimensions set: %s x %s", newWidth, newHeight));
+			setMeasuredDimension(newWidth, newHeight);
 		}
 	}
 }

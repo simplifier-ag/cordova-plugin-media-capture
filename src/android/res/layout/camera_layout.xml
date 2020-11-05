@@ -1,10 +1,9 @@
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/constraintlayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <RelativeLayout
+    <FrameLayout
         android:id="@+id/cameraPreview"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -13,18 +12,20 @@
             android:id="@+id/cameraPreviewTexture"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentTop="true"/>
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_gravity="center"
+            />
 
         <android.support.constraint.ConstraintLayout
             android:id="@+id/cameraControlBar"
             android:layout_width="match_parent"
             android:layout_height="112dp"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentBottom="true"
-            android:background="#cc4285f4">
+            android:background="#cc4285f4"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_gravity="bottom">
 
             <android.support.v7.widget.AppCompatImageButton
                 android:id="@+id/changeFlashMode"
@@ -71,7 +72,7 @@
                 app:layout_constraintVertical_bias="0.0"
                 app:srcCompat="@drawable/mediacap_switch" />
         </android.support.constraint.ConstraintLayout>
-    </RelativeLayout>
+    </FrameLayout>
 
     <android.support.constraint.ConstraintLayout
         android:id="@+id/picturePreview"
@@ -116,4 +117,4 @@
             app:srcCompat="@drawable/mediacap_repeat" />
     </android.support.constraint.ConstraintLayout>
 
-</android.support.constraint.ConstraintLayout>
+</FrameLayout>

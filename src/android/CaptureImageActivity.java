@@ -50,7 +50,7 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
-import android.widget.RelativeLayout;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import org.apache.cordova.BuildConfig;
@@ -83,7 +83,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	}
 
 	//Views
-	private RelativeLayout mCameraPreviewLayout;
+	private FrameLayout mCameraPreviewLayout;
 	private AutoFitTextureView mCameraPreviewTexture;
 	private AppCompatImageButton mChangeFlashModeButton;
 
@@ -214,7 +214,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				orientationEventListener = new OrientationEventListener(CaptureImageActivity.this) {
 					@Override
 					public void onOrientationChanged(int orientation) {
-						LOG.v(TAG, String.format("orientation changed %s", orientation));
 						handleOnOrientationChanged(orientation);
 					}
 				};
@@ -279,22 +278,20 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		orientation = (orientation + 45) / 90 * 90;
 		this.currentOrientation = orientation % 360;
 		int new_rotation;
-		int camera_orientation = mCameraInfo.get(CameraCharacteristics.SENSOR_ORIENTATION);
+		int cameraOrientation = mCameraInfo.get(CameraCharacteristics.SENSOR_ORIENTATION);
 		if( (mCameraInfo.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) ) {
-			new_rotation = (camera_orientation - orientation + 360) % 360;
+			new_rotation = (cameraOrientation - orientation + 360) % 360;
 		}
 		else {
-			new_rotation = (camera_orientation + orientation) % 360;
+			new_rotation = (cameraOrientation + orientation) % 360;
 		}
 		if( new_rotation != currentRotation ) {
-			LOG.d(TAG, "    current_orientation is " + currentOrientation);
-			LOG.d(TAG, "    info orientation is " + camera_orientation);
+			LOG.d(TAG, "    currentOrientation " + currentOrientation);
+			LOG.d(TAG, "    cameraOrientation " + cameraOrientation);
 			LOG.d(TAG, "    set Camera rotation from " + currentRotation + " to " + new_rotation);
 			this.currentRotation = new_rotation;
 		}
 	}
-
-	private void calculateCameraToPreviewMatrix() {}
 
 	/**
 	 * An additional thread for running tasks that shouldn't block the UI.
@@ -680,13 +677,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 				// We fit the aspect ratio of TextureView to the size of preview we picked.
 				int orientation = getResources().getConfiguration().orientation;
-				if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-					mCameraPreviewTexture.setAspectRatio(
-							mPreviewSize.getWidth(), mPreviewSize.getHeight());
-				} else {
-					mCameraPreviewTexture.setAspectRatio(
-							mPreviewSize.getHeight(), mPreviewSize.getWidth());
-				}
+				mCameraPreviewTexture.setAspectRatio(
+						mPreviewSize.getWidth(), mPreviewSize.getHeight(), orientation, this);
 
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 					// Check if the flash is supported.
@@ -1053,6 +1045,16 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		}
 	}
 
+	@Override
+	public void onConfigurationChanged(@NonNull Configuration newConfig) {
+		super.onConfigurationChanged(newConfig);
+
+		int newOrientation = newConfig.orientation;
+		if(null != mCameraPreviewTexture)
+			mCameraPreviewTexture.setAspectRatio(
+					mPreviewSize.getWidth(), mPreviewSize.getHeight(), newOrientation, this);
+	}
+
 	/**
 	 * Compares two {@code Size}s based on their areas.
 	 */
@@ -1198,7 +1200,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			//then we ask for a single request (not repeating!)
 			mCaptureSession.capture(mPreviewRequestBuilder.build(), captureCallbackHandler, mBackgroundHandler);
 			mManualFocusEngaged = true;
-		} catch (CameraAccessException e) {
+		} catch (Exception e) {
 			LOG.e(TAG, "Failed focusing", e);
 		}
 
