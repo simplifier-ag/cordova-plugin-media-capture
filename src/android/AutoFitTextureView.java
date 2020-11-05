@@ -1,6 +1,5 @@
 package org.apache.cordova.mediacapture;
 
-import android.app.Activity;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.TextureView;
@@ -32,8 +31,8 @@ public class AutoFitTextureView extends TextureView {
 	 * @param width  Relative horizontal size
 	 * @param height Relative vertical size
 	 */
-	public void setAspectRatio(int width, int height, int textureOrientation, Activity activity) {
-		LOG.v(TAG, String.format("setAspectRatio - width: %s, height: %s, orientation: %s", width, height, textureOrientation));
+	public void setAspectRatio(int width, int height) {
+		LOG.v(TAG, String.format("setAspectRatio - width: %s, height: %s", width, height));
 		if (width < 0 || height < 0) {
 			throw new IllegalArgumentException("Size cannot be negative.");
 		}

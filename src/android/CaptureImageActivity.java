@@ -678,7 +678,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				// We fit the aspect ratio of TextureView to the size of preview we picked.
 				int orientation = getResources().getConfiguration().orientation;
 				mCameraPreviewTexture.setAspectRatio(
-						mPreviewSize.getWidth(), mPreviewSize.getHeight(), orientation, this);
+						mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 					// Check if the flash is supported.
@@ -865,6 +865,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		if (null == mCameraPreviewTexture || null == mPreviewSize) {
 			return;
 		}
+		LOG.v(TAG, String.format("configureTransform: viewWidth %s, viewHeight %s", viewWidth, viewHeight));
 		int rotation = getWindowManager().getDefaultDisplay().getRotation();
 		Matrix matrix = new Matrix();
 		RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
@@ -882,6 +883,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		} else if (Surface.ROTATION_180 == rotation) {
 			matrix.postRotate(180, centerX, centerY);
 		}
+		LOG.v(TAG, String.format("configureTransform matrix: %s", matrix.toString()));
 		mCameraPreviewTexture.setTransform(matrix);
 	}
 
@@ -1049,10 +1051,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	public void onConfigurationChanged(@NonNull Configuration newConfig) {
 		super.onConfigurationChanged(newConfig);
 
-		int newOrientation = newConfig.orientation;
 		if(null != mCameraPreviewTexture)
 			mCameraPreviewTexture.setAspectRatio(
-					mPreviewSize.getWidth(), mPreviewSize.getHeight(), newOrientation, this);
+					mPreviewSize.getWidth(), mPreviewSize.getHeight());
 	}
 
 	/**
