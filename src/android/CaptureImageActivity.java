@@ -55,7 +55,6 @@ import android.widget.Toast;
 
 import org.apache.cordova.BuildConfig;
 import org.apache.cordova.LOG;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.text.DateFormat;
@@ -1152,9 +1151,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
 		CameraCaptureSession.CaptureCallback captureCallbackHandler = new CameraCaptureSession.CaptureCallback() {
 			@Override
-			public void onCaptureCompleted(@NotNull CameraCaptureSession session,
-										   @NotNull CaptureRequest request,
-										   @NotNull TotalCaptureResult result) {
+			public void onCaptureCompleted(@NonNull CameraCaptureSession session,
+										   @NonNull CaptureRequest request,
+										   @NonNull TotalCaptureResult result) {
 				super.onCaptureCompleted(session, request, result);
 				mManualFocusEngaged = false;
 
@@ -1171,9 +1170,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			}
 
 			@Override
-			public void onCaptureFailed(@NotNull CameraCaptureSession session,
-										@NotNull CaptureRequest request,
-										@NotNull CaptureFailure failure) {
+			public void onCaptureFailed(@NonNull CameraCaptureSession session,
+										@NonNull CaptureRequest request,
+										@NonNull CaptureFailure failure) {
 				super.onCaptureFailed(session, request, failure);
 				LOG.e(TAG, "Manual AF failure: " + failure);
 				mManualFocusEngaged = false;
