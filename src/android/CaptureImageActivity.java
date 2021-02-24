@@ -26,6 +26,8 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.MeteringRectangle;
+import android.hardware.camera2.params.OutputConfiguration;
+import android.hardware.camera2.params.SessionConfiguration;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -349,6 +351,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 						mCameraPreviewLayout.setVisibility(View.GONE);
 						mPicturePreviewLayout.setVisibility(View.VISIBLE);
 						mCapturedImageView.setImageBitmap(bitmap);
+						closeCamera();
 					});
 				}
 
@@ -791,65 +794,83 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 	 * Creates a new {@link CameraCaptureSession} for camera preview.
 	 */
 	private void createCameraPreviewSession() {
-		try {
-			SurfaceTexture texture = mCameraPreviewTexture.getSurfaceTexture();
-			assert texture != null;
 
-			// We configure the size of default buffer to be the size of camera preview we want.
-			texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+		SurfaceTexture texture = mCameraPreviewTexture.getSurfaceTexture();
+		assert texture != null;
 
-			// This is the output Surface we need to start preview.
-			Surface surface = new Surface(texture);
+		// We configure the size of default buffer to be the size of camera preview we want.
+		texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
-			// We set up a CaptureRequest.Builder with the output Surface.
-			mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-			mPreviewRequestBuilder.addTarget(surface);
+		// This is the output Surface we need to start preview.
+		final Surface surface = new Surface(texture);
 
-			// Here, we create a CameraCaptureSession for camera preview.
-			mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
-					new CameraCaptureSession.StateCallback() {
+		// On HMD Nokia 5.3 createCaptureSession fails because Surface seems not to be ready
+		// so we have to delay createCaptureSession because there is no callback which can help us here
+		new Handler().postDelayed(() -> {
+			try {
+				// We set up a CaptureRequest.Builder with the output Surface.
+				mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+				mPreviewRequestBuilder.addTarget(surface);
 
-						@Override
-						public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-							LOG.v(TAG, "preview configured");
-							// The camera is already closed
-							if (null == mCameraDevice) {
-								return;
-							}
-
-							// When the session is ready, we start displaying the preview.
-							mCaptureSession = cameraCaptureSession;
-							try {
-								// Auto focus should be continuous for camera preview.
-								mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-										CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-								// Flash is automatically enabled when necessary.
-								setFlashMode(mPreviewRequestBuilder);
-
-								// Finally, we start displaying the camera preview.
-								mPreviewRequest = mPreviewRequestBuilder.build();
-								mCaptureSession.setRepeatingRequest(mPreviewRequest,
-										mCaptureCallback, mBackgroundHandler);
-							} catch (Exception e) {
-								LOG.e(TAG, "Previewing camera session failed", e);
-								showToast("Failed showing preview");
-								surface.release();
-							}
+				CameraCaptureSession.StateCallback stateCallback = new CameraCaptureSession.StateCallback() {
+					@Override
+					public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+						LOG.v(TAG, "preview configured");
+						// The camera is already closed
+						if (null == mCameraDevice) {
+							return;
 						}
 
-						@Override
-						public void onConfigureFailed(
-								@NonNull CameraCaptureSession cameraCaptureSession) {
-							LOG.e(TAG, "Configuration failed");
+						// When the session is ready, we start displaying the preview.
+						mCaptureSession = cameraCaptureSession;
+						try {
+							// Auto focus should be continuous for camera preview.
+							mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+									CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+							// Flash is automatically enabled when necessary.
+							setFlashMode(mPreviewRequestBuilder);
+
+							// Finally, we start displaying the camera preview.
+							mPreviewRequest = mPreviewRequestBuilder.build();
+							mCaptureSession.setRepeatingRequest(mPreviewRequest,
+									mCaptureCallback, mBackgroundHandler);
+						} catch (Exception e) {
+							LOG.e(TAG, "Previewing camera session failed", e);
 							showToast("Failed showing preview");
 							surface.release();
-							finish();
 						}
-					}, null
-			);
-		} catch (CameraAccessException e) {
-			LOG.e(TAG, "Failed creating camera preview session", e);
-		}
+					}
+
+					@Override
+					public void onConfigureFailed(
+							@NonNull CameraCaptureSession cameraCaptureSession) {
+						LOG.e(TAG, "Configuration failed");
+						showToast("Failed showing preview");
+						surface.release();
+						finish();
+					}
+				};
+
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+					OutputConfiguration outputConfigSurface = new OutputConfiguration(surface);
+					OutputConfiguration outputConfigImageReader = new OutputConfiguration(mImageReader.getSurface());
+					SessionConfiguration config = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
+							Arrays.asList(outputConfigSurface, outputConfigImageReader),
+							getMainExecutor(),
+							stateCallback);
+
+					mCameraDevice.createCaptureSession(config);
+				} else {
+					// Marked as deprecated since API level 30
+					// Here, we create a CameraCaptureSession for camera preview.
+					mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
+							stateCallback, null
+					);
+				}
+			} catch (CameraAccessException e) {
+				LOG.e(TAG, "Failed creating camera preview session", e);
+			}
+		}, 100);
 	}
 
 	/**
@@ -1247,6 +1268,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		List<Size> notBigEnough = new ArrayList<>();
 		int w = aspectRatio.getWidth();
 		int h = aspectRatio.getHeight();
+
+		List<Size> fallbackSizes = new ArrayList<>();
+
 		for (Size option : choices) {
 			if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight &&
 					option.getHeight() == option.getWidth() * h / w) {
@@ -1256,6 +1280,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 				} else {
 					notBigEnough.add(option);
 				}
+			} else if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight) {
+				fallbackSizes.add(option);
 			}
 		}
 
@@ -1267,7 +1293,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 			return Collections.max(notBigEnough, new CompareSizesByArea());
 		} else {
 			LOG.e(TAG, "Couldn't find any suitable preview size");
-			return choices[0];
+			//return choices[0];
+			return Collections.max(fallbackSizes, new CompareSizesByArea());
 		}
 	}
 

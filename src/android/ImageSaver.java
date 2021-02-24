@@ -107,8 +107,14 @@ public class ImageSaver implements Runnable {
 		}
 	}
 
+	@Nullable
 	private Bitmap getRotatedBitmap(String imagePath) {
 		Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+
+		if (bitmap == null) {
+			Log.e(TAG, "Could not decode image");
+			return  null;
+		}
 
 		ExifInterface exif;
 
