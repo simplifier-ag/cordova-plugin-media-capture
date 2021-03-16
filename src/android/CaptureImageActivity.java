@@ -804,8 +804,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 		// This is the output Surface we need to start preview.
 		final Surface surface = new Surface(texture);
 
-		};
-
 		try {
 			// We set up a CaptureRequest.Builder with the output Surface.
 			mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
