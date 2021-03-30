@@ -134,8 +134,10 @@ _Bool saveToGallery = YES;
     // can support mode in OS
     
     //prevents copy of the image beeing save to the gallery
-    if(options[@"savetogallery"] != nil) {
-        saveToGallery = [[options valueForKey:@"savetogallery"]  isEqual: @"YES"];
+    if (![options isKindOfClass:[NSNull class]] && [options objectForKey:@"savetogallery"]) {
+        saveToGallery = [[options objectForKey:@"savetogallery"] boolValue];
+    } else {
+        saveToGallery = YES;
     }
 
     if (![UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
