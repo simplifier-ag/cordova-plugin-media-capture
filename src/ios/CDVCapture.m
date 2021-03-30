@@ -76,6 +76,7 @@
 
 @implementation CDVCapture
 @synthesize inUse;
+_Bool saveToGallery = YES;
 
 - (void)pluginInitialize
 {
@@ -131,6 +132,11 @@
     // options could contain limit and mode neither of which are supported at this time
     // taking more than one picture (limit) is only supported if provide own controls via cameraOverlayView property
     // can support mode in OS
+    
+    //prevents copy of the image beeing save to the gallery
+    if(options[@"savetogallery"] != nil) {
+        saveToGallery = [[options valueForKey:@"savetogallery"]  isEqual: @"YES"];
+    }
 
     if (![UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
         NSLog(@"Capture.imageCapture: camera not available.");
@@ -173,12 +179,15 @@
     CDVPluginResult* result = nil;
 
     // save the image to photo album
-    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+    if(saveToGallery) {
+        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+    }
 
     NSData* data = nil;
     if (mimeType && [mimeType isEqualToString:@"image/png"]) {
         data = UIImagePNGRepresentation(image);
     } else {
+        /// TODO create quality option
         data = UIImageJPEGRepresentation(image, 0.5);
     }
 
@@ -208,6 +217,9 @@
         result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
     }
 
+    //reset options
+    saveToGallery =  true;
+    
     return result;
 }
 

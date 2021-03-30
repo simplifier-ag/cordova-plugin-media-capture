@@ -153,6 +153,7 @@ exports.defineManualTests = function (contentEl, createActionButton) {
             // eslint-disable-line no-undef
             path = mediaFiles[0].localURL;
         }
+
         log('Image captured: ' + path);
         document.getElementById('camera_image').src = path;
     }
@@ -197,6 +198,12 @@ exports.defineManualTests = function (contentEl, createActionButton) {
     function getImages () {
         clearStatus();
         var options = { limit: 3 };
+        navigator.device.capture.captureImage(captureImagesWin, captureImageFail, options);
+    }
+
+    function getImagePrivate () {
+        clearStatus();
+        var options = { savetogallery: false };
         navigator.device.capture.captureImage(captureImagesWin, captureImageFail, options);
     }
 
@@ -332,6 +339,8 @@ exports.defineManualTests = function (contentEl, createActionButton) {
         'Expected result: Status box will update with image just taken.' +
         '<p/> <div id="images"></div>' +
         'Expected result: Status box will update with images just taken.' +
+        '<p/> <div id="imageprivate"></div>' +
+        'Expected result: Status box will update with images just taken.' +
         '<p/> <div id="video"></div>' +
         'Expected result: Record 10 second video. Status box will update with video file that you can play.' +
         '<p/> <div id="video_and_resolve"></div>' +
@@ -363,6 +372,14 @@ exports.defineManualTests = function (contentEl, createActionButton) {
             getImages();
         },
         'images'
+    );
+
+    createActionButton(
+        'Capture 1 image, but private',
+        function () {
+            getImagePrivate();
+        },
+        'imageprivate'
     );
 
     createActionButton(
