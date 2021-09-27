@@ -28,9 +28,13 @@ function wrapMediaFiles (pluginResult) {
         var mediaFile = new MediaFile();
         mediaFile.name = pluginResult[i].name;
 
+        var fullPath = device.platform === "iOS"
+            ? window.WkWebView.convertFilePath(pluginResult[i].fullPath)
+            : pluginResult[i].fullPath;
+
         // Backwards compatibility
-        mediaFile.localURL = pluginResult[i].localURL || pluginResult[i].fullPath;
-        mediaFile.fullPath = pluginResult[i].fullPath;
+        mediaFile.localURL = pluginResult[i].localURL || fullPath;
+        mediaFile.fullPath = fullPath;
         mediaFile.type = pluginResult[i].type;
         mediaFile.lastModifiedDate = pluginResult[i].lastModifiedDate;
         mediaFile.size = pluginResult[i].size;

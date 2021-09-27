@@ -21,7 +21,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-media-capture"
-    version="3.0.5">
+    version="3.0.5.7">
     <name>Capture</name>
 
     <description>Cordova Media Capture Plugin</description>
@@ -35,6 +35,7 @@
     </engines>
 
     <dependency id="cordova-plugin-file" version="^6.0.0" />
+    <dependency id="cordova-plugin-device" />
 
     <js-module src="www/CaptureAudioOptions.js" name="CaptureAudioOptions">
         <clobbers target="CaptureAudioOptions" />
@@ -78,7 +79,6 @@
 
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.RECORD_AUDIO" />
-            <uses-permission android:name="android.permission.RECORD_VIDEO"/>
             <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         </config-file>
