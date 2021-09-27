@@ -12,8 +12,8 @@
       "browser"
     ]
   },
-  "repository": "github:apache/cordova-plugin-media-capture",
-  "bugs": "https://github.com/apache/cordova-plugin-media-capture/issues",
+  "repository": "github:simplifier-ag/cordova-plugin-media-capture",
+  "bugs": "https://github.com/simplifier-ag/cordova-plugin-media-capture/issues",
   "keywords": [
     "cordova",
     "media",
