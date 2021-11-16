@@ -276,7 +276,10 @@ public class Capture extends CordovaPlugin {
             this.numPics = cursor.getCount();
             cursor.close();
 
-            Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+            boolean useInternalCameraApp = preferences.getBoolean("useInternalCameraApp", false);
+            Intent intent = useInternalCameraApp
+                    ? new Intent(cordova.getActivity(), CaptureImageActivity.class)
+                    : new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
 
             ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
             ContentValues cv = new ContentValues();
