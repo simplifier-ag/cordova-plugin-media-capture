@@ -10,8 +10,9 @@ import android.media.ExifInterface;
 import android.media.Image;
 import android.net.Uri;
 import android.provider.MediaStore;
-import android.support.annotation.Nullable;
 import android.util.Log;
+
+import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -124,7 +125,7 @@ public class ImageSaver implements Runnable {
 			Log.e(TAG, "Failed receiving ExIf metadata", e);
 			return bitmap;
 		}
-		int rotation = exif.getAttributeInt(android.support.media.ExifInterface.TAG_ORIENTATION, android.support.media.ExifInterface.ORIENTATION_NORMAL);
+		int rotation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
 		int rotationDegrees = exifToDegrees(rotation);
 
 		if (rotationDegrees != 0) {
@@ -141,11 +142,11 @@ public class ImageSaver implements Runnable {
 	}
 
 	private int exifToDegrees(int exifOrientation) {
-		if (exifOrientation == android.support.media.ExifInterface.ORIENTATION_ROTATE_90) {
+		if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) {
 			return 90;
-		} else if (exifOrientation == android.support.media.ExifInterface.ORIENTATION_ROTATE_180) {
+		} else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_180) {
 			return 180;
-		} else if (exifOrientation == android.support.media.ExifInterface.ORIENTATION_ROTATE_270) {
+		} else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_270) {
 			return 270;
 		}
 		return 0;
