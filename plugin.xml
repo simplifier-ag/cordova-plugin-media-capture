@@ -77,6 +77,18 @@
             </feature>
         </config-file>
 
+        <config-file target="AndroidManifest.xml" parent="application">
+            <provider
+                android:name="org.apache.cordova.mediacapture.FileProvider"
+                android:authorities="${applicationId}.cordova.plugin.mediacapture.provider"
+                android:exported="false"
+                android:grantUriPermissions="true" >
+                <meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/mediacapture_provider_paths"/>
+            </provider>
+        </config-file>
+
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.RECORD_AUDIO" />
             <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -107,7 +119,7 @@
         <source-file src="src/android/ImageSaver.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/PendingRequests.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/R.java" target-dir="src/org/apache/cordova/mediacapture" />
-
+    
         <resource-file src="src/android/res/drawable/mediacap_capture.xml" target="res/drawable/mediacap_capture.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_check.xml" target="res/drawable/mediacap_check.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_flash.xml" target="res/drawable/mediacap_flash.xml"/>
@@ -116,12 +128,17 @@
         <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
 
         <resource-file src="src/android/res/layout/camera_layout.xml" target="res/layout/camera_layout.xml"/>
+        <source-file src="src/android/FileProvider.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/xml/mediacapture_provider_paths.xml" target-dir="res/xml" />
 
         <js-module src="www/android/init.js" name="init">
             <runs />
         </js-module>
 
         <framework src="com.android.support:exifinterface:27.+" />
+        <preference name="ANDROID_SUPPORT_V4_VERSION" default="27.+"/>
+        <framework src="com.android.support:support-v4:$ANDROID_SUPPORT_V4_VERSION"/>
+
     </platform>
 
     <!-- ios -->
