@@ -2,158 +2,195 @@ package org.apache.cordova.mediacapture;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.media.ExifInterface;
 import android.media.Image;
 import android.net.Uri;
-import android.provider.MediaStore;
-import android.util.Log;
+import android.os.ParcelFileDescriptor;
 
 import androidx.annotation.Nullable;
+import androidx.exifinterface.media.ExifInterface;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import org.apache.cordova.LOG;
+
+import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 @SuppressLint("LogNotTimber")
 public class ImageSaver implements Runnable {
-	private final String TAG = ImageSaver.class.getSimpleName();
+    private final String TAG = ImageSaver.class.getSimpleName();
 
-	/**
-	 * The JPEG image
-	 */
-	private final Image mImage;
-	/**
-	 * The file we save the image into.
-	 */
-	private File mFile = null;
+    /**
+     * The JPEG image
+     */
+    private final Image mImage;
 
-	private Uri mUri = null;
-	private Context mContext = null;
 
-	private final ImageSaver.Callback mCallback;
+    /**
+     * content:// uri
+     */
+    private Uri mUri; //android q+
 
-	ImageSaver(Image image, File file, ImageSaver.Callback callback) {
-		mImage = image;
-		mFile = file;
-		mCallback = callback;
-	}
+    private Context mContext;
 
-	ImageSaver(Context context, Image image, Uri uri, ImageSaver.Callback callback) {
-		mContext = context;
-		mImage = image;
-		mUri = uri;
-		mCallback = callback;
-	}
+    private final ImageSaver.Callback mCallback;
 
-	@Override
-	public void run() {
-		boolean success = true;
-		ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
-		byte[] bytes = new byte[buffer.remaining()];
-		buffer.get(bytes);
-		OutputStream output = null;
-		try {
-			if (mUri != null) {
-				output = mContext.getContentResolver().openOutputStream(mUri);
-			} else {
-				output = new FileOutputStream(mFile);
-			}
+    ImageSaver(Context context, Image image, Uri uri, ImageSaver.Callback callback) {
+        mContext = context;
+        mImage = image;
+        mUri = uri;
+        mCallback = callback;
+    }
 
-			if (output == null) {
-				throw new IOException("Could not open OutputStream");
-			}
+    @Override
+    public void run() {
 
-			output.write(bytes);
-		} catch (IOException e) {
-			success = false;
-			Log.e(TAG, "Error while saving image", e);
-			mCallback.onFailure(e);
-		} finally {
-			mImage.close();
-			if (output != null) {
-				try {
-					output.close();
-				} catch (IOException e) {
-					Log.e(TAG, "Error while closing OutputStream", e);
-				}
-			}
-		}
+        try {
+            mCallback.onSuccess(
+                    getRotatedBitmap());
 
-		if (!success)
-			return;
+        } catch (SecurityException e) {
+            // received security exception from copyFileToUri()->openOutputStream() from Google Play
+            LOG.e(TAG, "security exception writing file", e);
+            mCallback.onFailure(e);
+        } catch (NullPointerException e) {
+            // received security exception from copyFileToUri()->openOutputStream() from Google Play
+            LOG.e(TAG, "nullPointer exception writing file", e);
+            mCallback.onFailure(e);
+        } finally {
+            //free up resources
+            mImage.close();
+        }
 
-		if (mUri != null) {
-			String[] filePath = {MediaStore.Images.Media.DATA};
-			Cursor cursor = mContext.getContentResolver().query(mUri, filePath, null, null, null);
 
-			if (cursor == null) {
-				Log.w(TAG, "Cursor of content resolver is null");
-				mCallback.onSuccess(null);
-				return;
-			}
+        //ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
+        //byte[] bytes = new byte[buffer.remaining()];
+        //buffer.get(bytes);
 
-			cursor.moveToFirst();
-			String imagePath = cursor.getString(cursor.getColumnIndex(filePath[0]));
-			cursor.close();
+//		try {
+//			output = mContext.getContentResolver().openOutputStream(mUri);
+//
+//			if (output == null) {
+//				throw new IOException("Could not open OutputStream");
+//			}
+//
+//			output.write(bytes);
+//		} catch (IOException e) {
+//			success = false;
+//			LOG.e(TAG, "Error while saving image", e);
+//			mCallback.onFailure(e);
+//		} finally {
+//			mImage.close();
+//			if (output != null) {
+//				try {
+//					output.close();
+//				} catch (IOException e) {
+//					LOG.e(TAG, "Error while closing OutputStream", e);
+//				}
+//			}
+//		}
+//
+//		if (!success)
+//			return;
+//
+//		String[] filePath = {MediaStore.Images.Media.DATA};
+//		Cursor cursor = mContext.getContentResolver().query(mUri, filePath, null, null, null);
+//
+//		if (cursor == null) {
+//			LOG.w(TAG, "Cursor of content resolver is null");
+//			mCallback.onSuccess(null);
+//			return;
+//		}
+//
+//		cursor.moveToFirst();
+//		String imagePath = cursor.getString(cursor.getColumnIndex(filePath[0]));
+//		cursor.close();
+//
+//		mCallback.onSuccess(getRotatedBitmap(imagePath));
+    }
 
-			mCallback.onSuccess(getRotatedBitmap(imagePath));
-		} else {
-			mCallback.onSuccess(getRotatedBitmap(mFile.getAbsolutePath()));
-		}
-	}
+    @Nullable
+    private Bitmap getRotatedBitmap() {
+        Image.Plane[] planes = mImage.getPlanes();
+        ByteBuffer buffer = planes[0].getBuffer();
+        buffer.rewind();
+        byte[] data = new byte[buffer.capacity()];
+        buffer.get(data);
+        mImage.close();
+        Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
 
-	@Nullable
-	private Bitmap getRotatedBitmap(String imagePath) {
-		Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+        try (InputStream inputStream = new ByteArrayInputStream(data)) {
+            ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw");
+            ExifInterface exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
 
-		if (bitmap == null) {
-			Log.e(TAG, "Could not decode image");
-			return  null;
-		}
+            //ExifInterface exif = new ExifInterface(inputStream);
 
-		ExifInterface exif;
+            int currentExifOrientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+            int mappedExifOrientation = 0;
+            // see http://jpegclub.org/exif_orientation.html
+            // and http://stackoverflow.com/questions/20478765/how-to-get-the-correct-orientation-of-the-image-selected-from-the-default-image
+            switch (currentExifOrientation) {
+                case ExifInterface.ORIENTATION_UNDEFINED:
+                case ExifInterface.ORIENTATION_NORMAL:
+                    // leave unchanged
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    mappedExifOrientation = 180;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    mappedExifOrientation = 90;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    mappedExifOrientation = 270;
+                    break;
+                default:
+                    // just leave unchanged for now
+                    LOG.e(TAG, "    unsupported exif orientation: " + currentExifOrientation);
+                    break;
+            }
 
-		try {
-			exif = new ExifInterface(imagePath);
-		} catch (IOException e) {
-			Log.e(TAG, "Failed receiving ExIf metadata", e);
-			return bitmap;
-		}
-		int rotation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-		int rotationDegrees = exifToDegrees(rotation);
+            if (mappedExifOrientation > ExifInterface.ORIENTATION_NORMAL) {
+                Matrix matrix = new Matrix();
+                matrix.setRotate(mappedExifOrientation);
+                Bitmap rotated_bitmap = Bitmap.createBitmap(bitmap, 0, 0,
+                        bitmap.getWidth(),
+                        bitmap.getHeight(),
+                        matrix,
+                        true);
+                if (rotated_bitmap != bitmap) {
+                    bitmap.recycle();
+                    bitmap = rotated_bitmap;
+                }
+            }
 
-		if (rotationDegrees != 0) {
-			Matrix matrix = new Matrix();
-			matrix.preRotate(rotationDegrees);
-			bitmap = Bitmap.createBitmap(bitmap, 0, 0,
-					bitmap.getWidth(),
-					bitmap.getHeight(),
-					matrix,
-					true);
-		}
 
-		return bitmap;
-	}
+            if (mUri == null || bitmap == null) {
+                throw new FileNotFoundException("no uri provided");
+            }
 
-	private int exifToDegrees(int exifOrientation) {
-		if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) {
-			return 90;
-		} else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_180) {
-			return 180;
-		} else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_270) {
-			return 270;
-		}
-		return 0;
-	}
+            //save compressed file
+            try (OutputStream output = mContext.getContentResolver().openOutputStream(mUri)) {
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, output))
+                    throw new IOException("could not compress image");
+            }
 
-	public interface Callback {
-		void onSuccess(@Nullable Bitmap bitmap);
-		void onFailure(Throwable t);
-	}
+
+        } catch (IOException e) {
+            LOG.e(TAG, "Failed receiving ExIf metadata", e);
+
+            return bitmap;
+        }
+        return bitmap;
+    }
+
+    public interface Callback {
+        void onSuccess(@Nullable Bitmap bitmap);
+
+        void onFailure(Throwable t);
+    }
 }

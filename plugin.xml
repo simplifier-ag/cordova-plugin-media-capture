@@ -116,6 +116,7 @@
         <source-file src="src/android/Capture.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/CaptureImageActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/FileProvider.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/ImageSaver.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/PendingRequests.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/R.java" target-dir="src/org/apache/cordova/mediacapture" />
@@ -126,10 +127,8 @@
         <resource-file src="src/android/res/drawable/mediacap_flash_off.xml" target="res/drawable/mediacap_flash_off.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_repeat.xml" target="res/drawable/mediacap_repeat.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
-
+        <resource-file src="src/android/res/xml/mediacapture_provider_paths.xml" target-dir="res/xml/mediacapture_provider_paths.xml" />
         <resource-file src="src/android/res/layout/camera_layout.xml" target="res/layout/camera_layout.xml"/>
-        <source-file src="src/android/FileProvider.java" target-dir="src/org/apache/cordova/mediacapture" />
-        <source-file src="src/android/xml/mediacapture_provider_paths.xml" target-dir="res/xml" />
 
         <js-module src="www/android/init.js" name="init">
             <runs />

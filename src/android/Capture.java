@@ -41,9 +41,6 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PermissionHelper;
-import org.apache.cordova.PluginManager;
-import org.apache.cordova.file.FileUtils;
-import org.apache.cordova.file.LocalFilesystemURL;
 import org.apache.cordova.mediacapture.PendingRequests.Request;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,9 +48,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -150,12 +144,6 @@ public class Capture extends CordovaPlugin {
             case "captureVideo":
                 this.captureVideo(pendingRequests.createRequest(CAPTURE_VIDEO, options, callbackContext));
                 break;
-            case "deleteFile":
-                this.deleteFile(args.getString(0), callbackContext);
-                break;
-            case "getFormatData":
-                this.deleteFile(args.getString(0), callbackContext);
-                break;
             default:
                 return false;
         }
@@ -251,10 +239,10 @@ public class Capture extends CordovaPlugin {
           try {
               Intent intent = new Intent(android.provider.MediaStore.Audio.Media.RECORD_SOUND_ACTION);
 
-              requestedContentUri = getDataUriForMediafile(CAPTURE_AUDIO);
+              requestedContentUri = getDataUriForMediaFile(CAPTURE_AUDIO);
               intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
               intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-              LOG.d(LOG_TAG, "Recording an audio and saving to: " + requestedContentUri);
+              LOG.d(LOG_TAG, "Recording audio and saving to: " + requestedContentUri);
               this.cordova.startActivityForResult(this, intent, req.requestCode);
           } catch (ActivityNotFoundException ex) {
               pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NOT_SUPPORTED, "No Activity found to handle Audio Capture."));
@@ -296,7 +284,7 @@ public class Capture extends CordovaPlugin {
                     : new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
 
 
-            requestedContentUri = getDataUriForMediafile(CAPTURE_IMAGE);
+            requestedContentUri = getDataUriForMediaFile(CAPTURE_IMAGE);
             intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
             intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             LOG.d(LOG_TAG, "Taking a picture and saving to: " + requestedContentUri);
@@ -326,7 +314,7 @@ public class Capture extends CordovaPlugin {
         } else {
             Intent intent = new Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE);
 
-            requestedContentUri = getDataUriForMediafile(CAPTURE_VIDEO);
+            requestedContentUri = getDataUriForMediaFile(CAPTURE_VIDEO);
             intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
             intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
@@ -343,7 +331,7 @@ public class Capture extends CordovaPlugin {
      * @return content://-uri for a given media file type
      */
     @Nullable
-    private Uri getDataUriForMediafile(int type) {
+    private Uri getDataUriForMediaFile(int type) {
         File mediaStorageDir;
         Uri uri;
         String timeStamp = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault()).format(new Date());
@@ -521,29 +509,25 @@ public class Capture extends CordovaPlugin {
      *
      * @param data the Uri of the audio/image/video
      * @return a JSONObject that represents a File
-     * @throws IOException
      */
     private JSONObject createMediaFile(Uri data) {
         JSONObject obj = new JSONObject();
 
-        /*
-        TODO: date modified is not in result
+        //TODO: date modified is not in result
         String[] projection = {
+                //MediaStore.MediaColumns.DATA
                 MediaStore.MediaColumns.DISPLAY_NAME,
                 MediaStore.MediaColumns.SIZE,
-                MediaStore.MediaColumns.DATE_MODIFIED,
+                MediaStore.MediaColumns.DATE_MODIFIED
         };
-         */
 
         String name = "";
         String mimetype = "";
         int size = 0;
         long lastModifiedDate = 0;
         ContentResolver cr = cordova.getContext().getContentResolver();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            cr.refresh(data, null, null);
-        }
-        Cursor metaCursor = cr.query(data, null, null, null, null);
+
+        Cursor metaCursor = cr.query(data, projection, null, null, null);
         if (metaCursor != null) {
             try {
                 if (metaCursor.moveToFirst()) {

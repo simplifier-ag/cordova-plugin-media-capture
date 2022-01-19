@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -15,14 +16,14 @@
             android:layout_gravity="center"
             />
 
-        <android.support.constraint.ConstraintLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/cameraControlBar"
             android:layout_width="match_parent"
             android:layout_height="112dp"
             android:background="#cc4285f4"
             android:layout_gravity="bottom">
 
-            <android.support.v7.widget.AppCompatImageButton
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/changeFlashMode"
                 android:layout_width="70dp"
                 android:layout_height="0dp"
@@ -37,7 +38,7 @@
                 app:layout_constraintVertical_bias="0.0"
                 app:srcCompat="@drawable/mediacap_flash_off" />
 
-            <android.support.v7.widget.AppCompatImageButton
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/takePicture"
                 android:layout_width="100dp"
                 android:layout_height="0dp"
@@ -52,7 +53,7 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:srcCompat="@drawable/mediacap_capture" />
 
-            <android.support.v7.widget.AppCompatImageButton
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/switchCamera"
                 android:layout_width="70dp"
                 android:layout_height="0dp"
@@ -66,22 +67,22 @@
                 app:layout_constraintTop_toTopOf="@+id/takePicture"
                 app:layout_constraintVertical_bias="0.0"
                 app:srcCompat="@drawable/mediacap_switch" />
-        </android.support.constraint.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </FrameLayout>
 
-    <android.support.constraint.ConstraintLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/picturePreview"
         android:layout_width="match_parent"
         android:visibility="gone"
         android:layout_height="match_parent"
         android:background="#444444">
 
-        <android.support.v7.widget.AppCompatImageView
+        <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/capturedImageView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <android.support.v7.widget.AppCompatImageButton
+        <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/pictureAccept"
             style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
             android:layout_width="100dp"
@@ -94,7 +95,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:srcCompat="@drawable/mediacap_check" />
 
-        <android.support.v7.widget.AppCompatImageButton
+        <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/pictureRepeat"
             style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
             android:layout_width="0dp"
@@ -110,6 +111,6 @@
             app:layout_constraintStart_toEndOf="@id/pictureAccept"
             app:layout_constraintTop_toTopOf="@+id/pictureAccept"
             app:srcCompat="@drawable/mediacap_repeat" />
-    </android.support.constraint.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </FrameLayout>
