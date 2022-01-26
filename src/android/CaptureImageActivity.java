@@ -36,11 +36,9 @@ import android.media.ImageReader;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.provider.MediaStore;
-import android.util.Log;
 import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -58,12 +56,10 @@ import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.appcompat.widget.AppCompatImageView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
-import androidx.exifinterface.media.ExifInterface;
 
 import org.apache.cordova.BuildConfig;
 import org.apache.cordova.LOG;
 
-import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -96,6 +92,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
     private ConstraintLayout mPicturePreviewLayout;
     private AppCompatImageView mCapturedImageView;
+
+    private AppCompatImageButton mPictureRotateRightButton;
+    private AppCompatImageButton mPictureRotateLeftButton;
 
     /**
      * Flash mode
@@ -145,14 +144,23 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
     /**
      * holds current orientation
      */
-    private int currentOrientation;
+    private int mCurrentOrientation;
 
     /**
      * hold current rotation
      */
-    private int currentRotation;
+    private int mCurrentRotation;
 
-    CameraManager manager;
+    /**
+     * file info for contentResolver
+     */
+    private ContentValues contentValues;
+
+    /**
+     * camera service class
+     */
+    CameraManager mManager;
+
 
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
@@ -206,6 +214,11 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
      * The {@link android.util.Size} of camera preview.
      */
     private Size mPreviewSize;
+
+    /**
+     * blocks ui while processing
+     */
+    private ConstraintLayout mProgressIndicator;
 
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its state.
@@ -285,7 +298,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             return;
         }
         orientation = (orientation + 45) / 90 * 90;
-        this.currentOrientation = orientation % 360;
+        this.mCurrentOrientation = orientation % 360;
         int new_rotation;
         int cameraOrientation = mCameraInfo.get(CameraCharacteristics.SENSOR_ORIENTATION);
         if ((mCameraInfo.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT)) {
@@ -293,11 +306,11 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         } else {
             new_rotation = (cameraOrientation + orientation) % 360;
         }
-        if (new_rotation != currentRotation) {
-            LOG.d(TAG, "    currentOrientation " + currentOrientation);
+        if (new_rotation != mCurrentRotation) {
+            LOG.d(TAG, "    currentOrientation " + mCurrentOrientation);
             LOG.d(TAG, "    cameraOrientation " + cameraOrientation);
-            LOG.d(TAG, "    set Camera rotation from " + currentRotation + " to " + new_rotation);
-            this.currentRotation = new_rotation;
+            LOG.d(TAG, "    set Camera rotation from " + mCurrentRotation + " to " + new_rotation);
+            this.mCurrentRotation = new_rotation;
         }
     }
 
@@ -348,19 +361,41 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
             ImageSaver.Callback callback = new ImageSaver.Callback() {
                 @Override
-                public void onSuccess(@Nullable Bitmap bitmap) {
+                public void onSuccess(final Bitmap bitmap) {
                     runOnUiThread(() -> {
+                        toggleLoadingIndicator(false);
+
                         mCameraPreviewLayout.setVisibility(View.GONE);
                         mPicturePreviewLayout.setVisibility(View.VISIBLE);
-                        mCapturedImageView.setImageBitmap(bitmap);
+
                         closeCamera();
+
+                        mCapturedImageView.setImageBitmap(bitmap);
+
+                        mPictureRotateRightButton.setOnClickListener(v -> {
+                            toggleLoadingIndicator(true);
+                            mBackgroundHandler.post(
+                                    new ImageSaver(CaptureImageActivity.this, bitmap, mSaveFileUri, 90f, this)
+                            );
+                        });
+                        mPictureRotateLeftButton.setOnClickListener(v -> {
+                            toggleLoadingIndicator(true);
+                            mBackgroundHandler.post(
+                                    new ImageSaver(CaptureImageActivity.this, bitmap, mSaveFileUri, -90f, this)
+                            );
+                        });
+
                     });
                 }
 
                 @Override
                 public void onFailure(Throwable t) {
-                    LOG.e(TAG, "Failed saving image", t);
-                    showErrorDialog(String.format("Failed saving image.\n%s", t.getMessage()));
+                    runOnUiThread(() -> {
+
+                        toggleLoadingIndicator(false);
+                        LOG.e(TAG, "Failed saving image", t);
+                        showErrorDialog(String.format("Failed saving image.\n%s", t.getMessage()));
+                    });
                 }
             };
 
@@ -416,7 +451,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         public void onCaptureProgressed(@NonNull CameraCaptureSession session,
                                         @NonNull CaptureRequest request,
                                         @NonNull CaptureResult partialResult) {
-            process(partialResult);
+            //process(partialResult);
         }
 
         @Override
@@ -482,13 +517,15 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             LOG.setLogLevel(LOG.VERBOSE);
         }
 
-        manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        mManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
             setContentView(getResources().getIdentifier("camera_layout", "layout", getPackageName()));
 
             mCameraPreviewLayout = findViewById(R.getId(this, "cameraPreview"));
             mCameraPreviewTexture = findViewById(R.getId(this, "cameraPreviewTexture"));
             mChangeFlashModeButton = findViewById(R.getId(this, "changeFlashMode"));
+            mProgressIndicator = findViewById(R.getId(this, "progressIndicator"));
+
             AppCompatImageButton takePictureButton = findViewById(R.getId(this, "takePicture"));
             AppCompatImageButton switchCameraButton = findViewById(R.getId(this, "switchCamera"));
 
@@ -496,6 +533,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             mCapturedImageView = findViewById(R.getId(this, "capturedImageView"));
             AppCompatImageButton pictureAcceptButton = findViewById(R.getId(this, "pictureAccept"));
             AppCompatImageButton pictureRepeatButton = findViewById(R.getId(this, "pictureRepeat"));
+            mPictureRotateRightButton = findViewById(R.getId(this, "rotate_right"));
+            mPictureRotateLeftButton = findViewById(R.getId(this, "rotate_left"));
 
             mChangeFlashModeButton.setOnClickListener(v -> {
                 mUseFlash = !mUseFlash;
@@ -528,6 +567,9 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
                 mCapturedImageView.setImageDrawable(null);
 
+                getContentResolver().delete(mSaveFileUri, null, null);
+                LOG.i(TAG, String.format("discarding %s", mSaveFileUri));
+
                 openCamera(mCameraPreviewTexture.getWidth(), mCameraPreviewTexture.getHeight());
             });
 
@@ -547,19 +589,34 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        if (mSaveFileUri != null) {
+            try {
+                getContentResolver().delete(mSaveFileUri, null, null);
+            } catch (Exception e) {
+                LOG.w("error removing file before closing", e);
+            }
+        }
+        Intent resultIntent = new Intent();
+        setResult(Activity.RESULT_CANCELED, resultIntent);
+        finish();
+    }
+
+    /**
+     * creates a content:// uri in DCIM folder if no uri was provided in intent
+     *
+     * @return a new
+     * @throws IOException if the folder could not be inserted
+     */
     private Uri createFileUri() throws IOException {
         ContentResolver cr = getContentResolver();
         String name = DateFormat.getDateInstance().format(new Date()) + ".jpg";
-        String relativePath = Environment.DIRECTORY_DCIM + File.separator + getPackageName();
 
-        ContentValues contentValues = new ContentValues();
+        contentValues = new ContentValues();
         contentValues.put(MediaStore.Images.Media.DISPLAY_NAME, name);
         String mime_type = cr.getType(Uri.parse(name));
         contentValues.put(MediaStore.Images.Media.MIME_TYPE, mime_type);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            contentValues.put(MediaStore.Images.Media.RELATIVE_PATH, relativePath);
-            contentValues.put(MediaStore.Images.Media.IS_PENDING, 1);
-        }
 
         Uri folder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ?
                 MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY) :
@@ -572,7 +629,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             LOG.e(TAG, "IllegalArgumentException inserting to mediastore", e);
             throw new IOException("IllegalArgumentException inserting to mediastore");
         } catch (IllegalStateException e) {
-            // have received Google Play crashes from ContentResolver.insert() call for mediastore method
+            // may crash on some devices with this exception
             LOG.e(TAG, "IllegalStateException inserting to mediastore", e);
             throw new IOException("IllegalStateException inserting to mediastore");
         }
@@ -610,7 +667,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
      */
     @SuppressWarnings("SuspiciousNameCombination")
     private void setUpCameraOutputs(int width, int height, boolean showBackCamera) {
-        if (manager == null) {
+        if (mManager == null) {
             // Currently an NPE is thrown when the Camera2API is used but not supported on the
             // device this code runs.
             showErrorDialog("Camera Error");
@@ -618,8 +675,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         }
 
         try {
-            for (String cameraId : manager.getCameraIdList()) {
-                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+            for (String cameraId : mManager.getCameraIdList()) {
+                CameraCharacteristics characteristics = mManager.getCameraCharacteristics(cameraId);
 
                 Integer deviceLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL); // 0 - limited, 1 - full, 2 - legacy, 3 - uber full
                 LOG.v(TAG, String.format("Camera hardware level: %s", deviceLevel));
@@ -705,7 +762,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
                         maxPreviewHeight, largest);
 
                 // We fit the aspect ratio of TextureView to the size of preview we picked.
-                int orientation = getResources().getConfiguration().orientation;
                 mCameraPreviewTexture.setAspectRatio(
                         mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
@@ -726,34 +782,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         }
     }
 
-    private int getExifOrientation(CameraCharacteristics characteristics) {
-        int exif_orientation = ExifInterface.ORIENTATION_NORMAL;
-        int currentFacing = characteristics.get(CameraCharacteristics.LENS_FACING);
-        switch( (currentRotation + 360) % 360 ) {
-            case 0:
-                exif_orientation = ExifInterface.ORIENTATION_NORMAL;
-                break;
-            case 90:
-                exif_orientation = (currentFacing == CameraCharacteristics.LENS_FACING_FRONT) ?
-                        ExifInterface.ORIENTATION_ROTATE_270 :
-                        ExifInterface.ORIENTATION_ROTATE_90;
-                break;
-            case 180:
-                exif_orientation = ExifInterface.ORIENTATION_ROTATE_180;
-                break;
-            case 270:
-                exif_orientation = (currentFacing == CameraCharacteristics.LENS_FACING_FRONT) ?
-                        ExifInterface.ORIENTATION_ROTATE_90 :
-                        ExifInterface.ORIENTATION_ROTATE_270;
-                break;
-            default:
-                // leave exif_orientation unchanged
-                LOG.e(TAG, "unexpected rotation: " + exif_orientation);
-                break;
-        }
-        return exif_orientation;
-    }
-
     /**
      * Opens the camera specified by {@link CaptureImageActivity#mCameraId}.
      */
@@ -771,14 +799,14 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
 
-            if (manager == null) {
+            if (mManager == null) {
                 // Currently an NPE is thrown when the Camera2API is used but not supported on the
                 // device this code runs.
                 showErrorDialog("Camera Error");
                 return;
             }
 
-            manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
+            mManager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
         } catch (Exception e) {
             LOG.e(TAG, "Failed opening camera", e);
             showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
@@ -956,7 +984,14 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
      * Initiate a still image capture.
      */
     private void takePicture() {
+        toggleLoadingIndicator(true);
         lockFocus();
+    }
+
+    private void toggleLoadingIndicator(boolean visible) {
+        if (mProgressIndicator != null) {
+            mProgressIndicator.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
     }
 
     /**
@@ -1012,10 +1047,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             setFlashMode(captureBuilder);
 
-            CameraCharacteristics cameraCharacteristics = manager.getCameraCharacteristics(mCameraDevice.getId());
-            int rotation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
-            //int rotation = getExifOrientation(cameraCharacteristics);
-
             // Orientation
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getImageVideoRotation());
 
@@ -1060,20 +1091,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         } catch (CameraAccessException e) {
             LOG.e(TAG, "Capturing still picture failed", e);
         }
-    }
-
-    /**
-     * Retrieves the JPEG orientation from the specified screen rotation.
-     *
-     * @param rotation The screen rotation.
-     * @return The JPEG orientation (one of 0, 90, 270, and 360)
-     */
-    private int getOrientation(int rotation) {
-        // Sensor orientation is 90 for most devices, or 270 for some devices (eg. Nexus 5X)
-        // We have to take that into account and rotate JPEG properly.
-        // For devices with orientation of 90, we simply return our mapping from ORIENTATIONS.
-        // For devices with orientation of 270, we need to rotate the JPEG 180 degrees.
-        return (ORIENTATIONS.get(rotation) + mSensorOrientation + 270) % 360;
     }
 
     /**
@@ -1142,11 +1159,11 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
      * Shows an error message dialog.
      */
     private void showErrorDialog(String msg) {
-        runOnUiThread(() -> new AlertDialog.Builder(CaptureImageActivity.this)
+        new AlertDialog.Builder(CaptureImageActivity.this)
                 .setMessage(msg)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> finish())
                 .create()
-                .show());
+                .show();
     }
 
     private void requestCameraPermission() {
@@ -1368,10 +1385,11 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         return result;
     }
 
+
     /* Returns the rotation (in degrees) to use for images/videos, taking the preference_lock_orientation into account.
      */
     private int getImageVideoRotation() {
-        LOG.d(TAG, "getImageVideoRotation() from currentRotation " + currentRotation);
-        return this.currentRotation;
+        LOG.d(TAG, "getImageVideoRotation() from currentRotation " + mCurrentRotation);
+        return this.mCurrentRotation;
     }
 }
