@@ -32,9 +32,10 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 
-import androidx.annotation.Nullable;
+import androidx.exifinterface.media.ExifInterface;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -46,11 +47,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Date;
-import java.util.Locale;
 
 public class Capture extends CordovaPlugin {
 
@@ -60,9 +59,10 @@ public class Capture extends CordovaPlugin {
     private static final String[] AUDIO_TYPES = new String[]{"audio/3gpp", "audio/aac", "audio/amr", "audio/wav"};
     private static final String IMAGE_JPEG = "image/jpeg";
 
-    private static final int CAPTURE_AUDIO = 0;     // Constant for capture audio
-    private static final int CAPTURE_IMAGE = 1;     // Constant for capture image
-    private static final int CAPTURE_VIDEO = 2;     // Constant for capture video
+    protected static final int CAPTURE_AUDIO = 0;     // Constant for capture audio
+    protected static final int CAPTURE_IMAGE = 1;     // Constant for capture image
+    protected static final int CAPTURE_VIDEO = 2;     // Constant for capture video
+
     private static final String LOG_TAG = "Capture";
 
     private static final int CAPTURE_INTERNAL_ERR = 0;
@@ -74,7 +74,7 @@ public class Capture extends CordovaPlugin {
     public static final int PERMISSION_DENIED_ERROR = 20;
     public static final int TAKE_PIC_SEC = 0;
     public static final int SAVE_TO_ALBUM_SEC = 1;
-    protected final static String[] permissions = { Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE };
+    protected final static String[] permissions = {Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
     private boolean cameraPermissionInManifest;     // Whether or not the CAMERA permission is declared in AndroidManifest.xml
 
@@ -82,7 +82,6 @@ public class Capture extends CordovaPlugin {
 
     private int numPics;                            // Number of pictures before capture activity
 
-    private String applicationId;
 
     private Uri requestedContentUri;
 
@@ -90,7 +89,6 @@ public class Capture extends CordovaPlugin {
     protected void pluginInitialize() {
         super.pluginInitialize();
 
-        this.applicationId = cordova.getContext().getPackageName();
 
         // CB-10670: The CAMERA permission does not need to be requested unless it is declared
         // in AndroidManifest.xml. This plugin does not declare it, but others may and so we must
@@ -176,11 +174,9 @@ public class Capture extends CordovaPlugin {
 
         if (mimeType.equals(IMAGE_JPEG) || filePath.endsWith(".jpg")) {
             obj = getImageData(fileUrl, obj);
-        }
-        else if (Arrays.asList(AUDIO_TYPES).contains(mimeType)) {
+        } else if (Arrays.asList(AUDIO_TYPES).contains(mimeType)) {
             obj = getAudioVideoData(filePath, obj, false);
-        }
-        else if (mimeType.equals(VIDEO_3GPP) || mimeType.equals(VIDEO_MP4)) {
+        } else if (mimeType.equals(VIDEO_3GPP) || mimeType.equals(VIDEO_MP4)) {
             obj = getAudioVideoData(filePath, obj, true);
         }
         return obj;
@@ -190,7 +186,7 @@ public class Capture extends CordovaPlugin {
      * Get the Image specific attributes
      *
      * @param fileUrl url pointing to the file
-     * @param obj represents the Media File Data
+     * @param obj     represents the Media File Data
      * @return a JSONObject that represents the Media File Data
      * @throws JSONException
      */
@@ -207,8 +203,8 @@ public class Capture extends CordovaPlugin {
      * Get the Image specific attributes
      *
      * @param filePath path to the file
-     * @param obj represents the Media File Data
-     * @param video if true get video attributes as well
+     * @param obj      represents the Media File Data
+     * @param video    if true get video attributes as well
      * @return a JSONObject that represents the Media File Data
      * @throws JSONException
      */
@@ -232,21 +228,21 @@ public class Capture extends CordovaPlugin {
      * Sets up an intent to capture audio.  Result handled by onActivityResult()
      */
     private void captureAudio(Request req) {
-      if (!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-          PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
-      } else {
-          try {
-              Intent intent = new Intent(android.provider.MediaStore.Audio.Media.RECORD_SOUND_ACTION);
+        if (!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
+        } else {
+            try {
+                Intent intent = new Intent(android.provider.MediaStore.Audio.Media.RECORD_SOUND_ACTION);
 
-              requestedContentUri = getDataUriForMediaFile(CAPTURE_AUDIO);
-              intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
-              intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-              LOG.d(LOG_TAG, "Recording audio and saving to: " + requestedContentUri);
-              this.cordova.startActivityForResult(this, intent, req.requestCode);
-          } catch (ActivityNotFoundException ex) {
-              pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NOT_SUPPORTED, "No Activity found to handle Audio Capture."));
-          }
-      }
+                requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_AUDIO, cordova.getContext());
+                intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
+                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                LOG.d(LOG_TAG, "Recording audio and saving to: " + requestedContentUri);
+                this.cordova.startActivityForResult(this, intent, req.requestCode);
+            } catch (ActivityNotFoundException ex) {
+                pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NOT_SUPPORTED, "No Activity found to handle Audio Capture."));
+            }
+        }
     }
 
     //TODO add cdv api option to specify target activity. implicit intents (w/o class name) will
@@ -283,13 +279,13 @@ public class Capture extends CordovaPlugin {
                     : new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
 
 
-            requestedContentUri = getDataUriForMediaFile(CAPTURE_IMAGE);
+            requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_IMAGE, cordova.getContext());
             intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
             intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             LOG.d(LOG_TAG, "Taking a picture and saving to: " + requestedContentUri);
 
             //enable activity's intent filter to appear in camera app chooser dialog
-            setActivityEnabled(this.cordova.getActivity(), CaptureImageActivity.class.getCanonicalName(),true);
+            setActivityEnabled(this.cordova.getActivity(), CaptureImageActivity.class.getCanonicalName(), true);
 
             this.cordova.startActivityForResult(this, intent, req.requestCode);
         }
@@ -313,7 +309,7 @@ public class Capture extends CordovaPlugin {
         } else {
             Intent intent = new Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE);
 
-            requestedContentUri = getDataUriForMediaFile(CAPTURE_VIDEO);
+            requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_VIDEO, cordova.getContext());
             intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
             intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
@@ -324,64 +320,6 @@ public class Capture extends CordovaPlugin {
         }
     }
 
-    /**
-     * generates a file with MediaStore for a given media file type
-     * @param type target media type
-     * @return content://-uri for a given media file type
-     */
-    @Nullable
-    private Uri getDataUriForMediaFile(int type) {
-        File mediaStorageDir;
-        Uri uri;
-        String timeStamp = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault()).format(new Date());
-        switch (type) {
-            case CAPTURE_AUDIO: {
-                mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_MUSIC), applicationId);
-                String fileName = "AUDIO_" + timeStamp + ".mp3";
-                File audio = new File(mediaStorageDir, fileName);
-
-                uri = FileProvider.getUriForFile(this.cordova.getActivity(),
-                        this.applicationId + ".cordova.plugin.mediacapture.provider",
-                        audio);
-                break;
-            }
-
-            case CAPTURE_IMAGE: {
-                mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_PICTURES), applicationId);
-                String fileName = "IMG_" + timeStamp + ".jpg";
-                File image = new File(mediaStorageDir, fileName);
-
-                uri = FileProvider.getUriForFile(this.cordova.getActivity(),
-                        this.applicationId + ".cordova.plugin.mediacapture.provider",
-                        image);
-            }
-                break;
-            case CAPTURE_VIDEO: {
-                mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_MOVIES), applicationId);
-                String fileName = "VID_" + timeStamp + ".mp4";
-                File video = new File(mediaStorageDir, fileName);
-
-                uri = FileProvider.getUriForFile(this.cordova.getActivity(),
-                        this.applicationId + ".cordova.plugin.mediacapture.provider",
-                        video);
-            }
-                break;
-            default:
-                return null;
-        }
-
-        if (!mediaStorageDir.exists()){
-            if (!mediaStorageDir.mkdirs()){
-                LOG.d(LOG_TAG, "failed to create directory");
-                return null;
-            }
-        }
-        return uri;
-    }
-
     public void deleteFile(String contentUri, CallbackContext callbackContext) {
         if (cordova.getContext().getContentResolver().delete(Uri.parse(contentUri), null, null) <= 0) {
             File file = new File(contentUri);
@@ -389,33 +327,36 @@ public class Capture extends CordovaPlugin {
                 try {
                     if (!file.getCanonicalFile().delete() || file.exists()) {
                         callbackContext.error("error deleting file");
+                        return;
                     }
                 } catch (IOException e) {
                     callbackContext.error(e.getMessage());
+                    return;
                 }
             }
         }
+        callbackContext.success();
     }
 
     /**
      * Called when the video view exits.
      *
-     * @param requestCode       The request code originally supplied to startActivityForResult(),
-     *                          allowing you to identify who this result came from.
-     * @param resultCode        The integer result code returned by the child activity through its setResult().
-     * @param intent            An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
+     * @param requestCode The request code originally supplied to startActivityForResult(),
+     *                    allowing you to identify who this result came from.
+     * @param resultCode  The integer result code returned by the child activity through its setResult().
+     * @param intent      An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
      * @throws JSONException
      */
     public void onActivityResult(int requestCode, int resultCode, final Intent intent) {
         final Request req = pendingRequests.get(requestCode);
 
-        if(CAPTURE_IMAGE == req.action){
+        if (CAPTURE_IMAGE == req.action) {
             //disable ImageActivity alias to prevent other apps using this one
             setActivityEnabled(this.cordova.getActivity(), CaptureImageActivity.class.getCanonicalName(), false);
         }
 
         // Result received okay
-        if (resultCode == Activity.RESULT_OK) {
+        if (resultCode == Activity.RESULT_OK && intent != null) {
             Runnable processActivityResult = () -> {
                 //data might be empty, but assuming RESULT_OK the requested content uri should point to the created media file
                 Uri resultData = intent.getData();
@@ -523,7 +464,7 @@ public class Capture extends CordovaPlugin {
         String name = "";
         String mimetype = "";
         int size = 0;
-        long lastModifiedDate = 0;
+        String lastModifiedDate = "";
         ContentResolver cr = cordova.getContext().getContentResolver();
 
         Cursor metaCursor = cr.query(data, projection, null, null, null);
@@ -534,9 +475,35 @@ public class Capture extends CordovaPlugin {
                         name = metaCursor.getString(metaCursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME));
                     if (metaCursor.getColumnIndex(MediaStore.MediaColumns.SIZE) > -1)
                         size = metaCursor.getInt(metaCursor.getColumnIndex(MediaStore.MediaColumns.SIZE));
-                    if (metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED) > -1)
-                        lastModifiedDate = metaCursor.getLong(metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED));
+                    if (metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED) > -1) {
+                    }
+                    //lastModifiedDate = metaCursor.getLong(metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED));
                 }
+
+                ParcelFileDescriptor pfd = cr.openFileDescriptor(data, "r");
+                pfd.getFileDescriptor().sync();
+
+                ExifInterface intf = null;
+                try {
+                    intf = new ExifInterface(pfd.getFileDescriptor());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                if (intf != null) {
+                    lastModifiedDate = intf.getAttribute(ExifInterface.TAG_DATETIME);
+                    //LOG.i("Dated : "+ dateString.toString()); //Dispaly dateString. You can do/use it your own way
+                }
+
+                if (size <= 0)
+                    size = Math.toIntExact(pfd.getStatSize());
+
+                pfd.close();
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
             } finally {
                 metaCursor.close();
             }
@@ -603,6 +570,7 @@ public class Capture extends CordovaPlugin {
 
     /**
      * Determine if we are storing the images in internal or external storage
+     *
      * @return Uri
      */
     private Uri whichContentStore() {
@@ -659,15 +627,16 @@ public class Capture extends CordovaPlugin {
     /**
      * Enables/Disables activity image . Default is disabled. Prevents other apps to call the
      * activity but enabling it before calling startActivity will cause android to make it choosable by user
+     *
      * @param activity activity containing the target package
-     * @param enabled sets activity android:enabled for CaptureImageActivity (default false)
+     * @param enabled  sets activity android:enabled for CaptureImageActivity (default false)
      */
-    public static void setActivityEnabled(Activity activity, String targetActivity, boolean enabled){
+    public static void setActivityEnabled(Activity activity, String targetActivity, boolean enabled) {
         String packageName = activity.getPackageName();
         PackageManager pm = activity.getApplicationContext().getPackageManager();
 
         ComponentName cameraActivityAlias = new ComponentName(packageName, targetActivity);
-        if(enabled){
+        if (enabled) {
             pm.setComponentEnabledSetting(
                     cameraActivityAlias,
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED,

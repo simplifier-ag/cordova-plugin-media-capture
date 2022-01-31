@@ -1,6 +1,7 @@
 package org.apache.cordova.mediacapture;
 
 import android.annotation.SuppressLint;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -20,6 +21,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 @SuppressLint("LogNotTimber")
 public class ImageSaver implements Runnable {
@@ -94,11 +99,12 @@ public class ImageSaver implements Runnable {
         try {
             mCallback.onSuccess(getBitmap());
         } catch (Exception e) {
+            LOG.e(TAG, "error saving image", e);
             mCallback.onFailure(e);
         }
     }
 
-    @Nullable
+    @NonNull
     private Bitmap getBitmap() throws Exception {
         byte[] data = null;
 
@@ -110,22 +116,21 @@ public class ImageSaver implements Runnable {
                 buffer.rewind();
                 data = new byte[buffer.capacity()];
                 buffer.get(data);
-                mImage.close();
                 mBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-            } catch (SecurityException e) {
-                // received security exception from copyFileToUri()->openOutputStream() from Google Play
-                LOG.e(TAG, "security exception writing file", e);
-                throw new Exception("security exception writing file");
             } catch (NullPointerException e) {
-                LOG.e(TAG, "nullPointer exception writing file", e);
                 throw new Exception("nullPointer exception writing file");
             } finally {
                 mImage.close();
             }
         }
 
+        //resolve from uri
         if (mBitmap == null) {
-            throw new Exception("Error generating image");
+            try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
+                mBitmap = BitmapFactory.decodeFileDescriptor(parcelFileDescriptor.getFileDescriptor());
+            } catch (IOException e) {
+                throw new Exception("Error generating image");
+            }
         }
 
         //get exif from image data
@@ -134,14 +139,12 @@ public class ImageSaver implements Runnable {
             try (InputStream inputStream = new ByteArrayInputStream(data)) {
                 exif = new ExifInterface(inputStream);
             } catch (IOException e) {
-                LOG.e(TAG, "Failed receiving ExIf metadata", e);
                 throw new Exception("Failed receiving ExIf metadata");
             }
         } else { //try reading exif from uri
             try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
                 exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
             } catch (IOException e) {
-                LOG.e(TAG, "Failed receiving ExIf metadata", e);
                 throw new Exception("Failed receiving ExIf metadata");
             }
         }
@@ -159,13 +162,34 @@ public class ImageSaver implements Runnable {
             mBitmap = rotateBitMap(mBitmap, mRotation);
         }
 
+        ContentResolver cr = mContext.getContentResolver();
         //save compressed file
         try (OutputStream output = mContext.getContentResolver().openOutputStream(mUri)) {
             if (!mBitmap.compress(Bitmap.CompressFormat.JPEG, 90, output))
                 throw new IOException("could not compress image");
+            else {
+                //store meta data
+                try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
+                    exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
+                    //TODO: set correct date format
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault());
+                    sdf.setTimeZone(TimeZone.getTimeZone("Etc/UTC"));
+                    String date = sdf.format(new Date());
+                    exif.setAttribute(ExifInterface.TAG_DATETIME, date);
+                    exif.saveAttributes();
+                } catch (IOException e) {
+                    LOG.e(TAG, "Failed receiving ExIf metadata", e);
+                }
+            }
         } catch (Exception e) {
-            LOG.e(TAG, "Failed saving image", e);
+            throw new IOException("could not create image");
         }
+
+/*        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            mContentValues.clear();
+            mContentValues.put(MediaStore.Images.Media.IS_PENDING, 0);
+            cr.update(mUri, mContentValues, null, null);
+        }*/
 
         return mBitmap;
     }
@@ -175,6 +199,7 @@ public class ImageSaver implements Runnable {
      * @param bitmap  source bitmap
      * @param degrees positive integer in degrees rotates right, negative left
      */
+    @NonNull
     Bitmap rotateBitMap(Bitmap bitmap, float degrees) {
         Matrix matrix = new Matrix();
         matrix.preRotate(degrees);
@@ -183,7 +208,7 @@ public class ImageSaver implements Runnable {
 
     /**
      * maps exif orientation to int
-     * @param exifOrientation
+     * @param exifOrientation given exif orientation
      * @return orientation in degrees
      */
     private int exifToDegrees(int exifOrientation) {
@@ -198,7 +223,7 @@ public class ImageSaver implements Runnable {
     }
 
     public interface Callback {
-        void onSuccess(final Bitmap bitmap);
+        void onSuccess(@NonNull final Bitmap bitmap);
 
         void onFailure(Throwable t);
     }
