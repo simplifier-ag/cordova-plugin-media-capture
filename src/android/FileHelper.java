@@ -80,7 +80,7 @@ public class FileHelper {
      * @return content://-uri for a given media file type
      */
     @Nullable
-    public static Uri getDataUriForMediaFile(int type, Context context) {
+    public static Uri getDataUriForMediaFile(int type, Context context) throws IllegalArgumentException {
 
         String applicationId = context.getPackageName();
         File mediaStorageDir;

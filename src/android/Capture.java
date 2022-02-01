@@ -47,7 +47,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -453,7 +452,6 @@ public class Capture extends CordovaPlugin {
     private JSONObject createMediaFile(Uri data) {
         JSONObject obj = new JSONObject();
 
-        //TODO: date modified is not in result
         String[] projection = {
                 //MediaStore.MediaColumns.DATA
                 MediaStore.MediaColumns.DISPLAY_NAME,
@@ -470,40 +468,37 @@ public class Capture extends CordovaPlugin {
         Cursor metaCursor = cr.query(data, projection, null, null, null);
         if (metaCursor != null) {
             try {
+                //read meta data from media cursor
                 if (metaCursor.moveToFirst()) {
                     if (metaCursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME) > -1)
                         name = metaCursor.getString(metaCursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME));
                     if (metaCursor.getColumnIndex(MediaStore.MediaColumns.SIZE) > -1)
                         size = metaCursor.getInt(metaCursor.getColumnIndex(MediaStore.MediaColumns.SIZE));
                     if (metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED) > -1) {
+                        lastModifiedDate = metaCursor.getString(metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED));
                     }
-                    //lastModifiedDate = metaCursor.getLong(metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED));
                 }
 
-                ParcelFileDescriptor pfd = cr.openFileDescriptor(data, "r");
-                pfd.getFileDescriptor().sync();
+                //try reading from parcelFileDiscriptor / ExifInterface
+                try (ParcelFileDescriptor pfd = cr.openFileDescriptor(data, "r")) {
+                    pfd.getFileDescriptor().sync();
 
-                ExifInterface intf = null;
-                try {
-                    intf = new ExifInterface(pfd.getFileDescriptor());
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    ExifInterface exif;
+                    try {
+                        exif = new ExifInterface(pfd.getFileDescriptor());
+                        if (!lastModifiedDate.isEmpty()) {
+                            lastModifiedDate = exif.getAttribute(ExifInterface.TAG_DATETIME);
+                        }
+                    } catch (IOException e) {
+                        LOG.e(LOG_TAG,"Error reading exif interface for %s", data);
+                    }
+
+                    if (size <= 0)
+                        size = Math.toIntExact(pfd.getStatSize());
                 }
 
-                if (intf != null) {
-                    lastModifiedDate = intf.getAttribute(ExifInterface.TAG_DATETIME);
-                    //LOG.i("Dated : "+ dateString.toString()); //Dispaly dateString. You can do/use it your own way
-                }
-
-                if (size <= 0)
-                    size = Math.toIntExact(pfd.getStatSize());
-
-                pfd.close();
-
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                LOG.e(LOG_TAG, "error reading meta data", e);
             } finally {
                 metaCursor.close();
             }

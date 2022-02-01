@@ -575,7 +575,11 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             mSaveFileUri = (Uri) getIntent().getExtras().get(MediaStore.EXTRA_OUTPUT);
         } else {
             //should not happen
-            mSaveFileUri = FileHelper.getDataUriForMediaFile(Capture.CAPTURE_IMAGE, this);
+            try {
+                mSaveFileUri = FileHelper.getDataUriForMediaFile(Capture.CAPTURE_IMAGE, this);
+            } catch (IllegalArgumentException e) {
+                LOG.e(TAG, "error creating data uri");
+            }
         }
 
         if (mSaveFileUri == null) {
