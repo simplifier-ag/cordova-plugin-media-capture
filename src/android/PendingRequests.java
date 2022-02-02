@@ -178,6 +178,9 @@ public class PendingRequests {
         // Quality level for video capture 0 low, 1 high (CAPTURE_VIDEO only)
         public int quality = 1;
 
+        //force internal camera activity
+        public boolean useInternalCameraApp;
+
         // Confirm capture of image
         public boolean confirmCapture = true;
 
@@ -196,6 +199,7 @@ public class PendingRequests {
                 this.duration = options.optInt("duration", 0);
                 this.quality = options.optInt("quality", 1);
                 this.confirmCapture = options.optBoolean("confirmCapture", true);
+                this.useInternalCameraApp = options.optBoolean("useInternalCameraApp", false);
             }
 
             this.requestCode = incrementCurrentReqId();

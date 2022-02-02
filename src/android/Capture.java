@@ -110,6 +110,7 @@ public class Capture extends CordovaPlugin {
             // never be caught
             LOG.e(LOG_TAG, "Failed checking for CAMERA permission in manifest", e);
         }
+
     }
 
     @Override
@@ -135,6 +136,10 @@ public class Capture extends CordovaPlugin {
                 this.captureAudio(pendingRequests.createRequest(CAPTURE_AUDIO, options, callbackContext));
                 break;
             case "captureImage":
+                if (!options.has("useInternalCameraApp")) {
+                    //check cordova options
+                    options.put("useInternalCameraApp", preferences.getBoolean("useInternalCameraApp", false));
+                }
                 this.captureImage(pendingRequests.createRequest(CAPTURE_IMAGE, options, callbackContext));
                 break;
             case "captureVideo":
@@ -272,8 +277,7 @@ public class Capture extends CordovaPlugin {
             this.numPics = cursor.getCount();
             cursor.close();
 
-            boolean useInternalCameraApp = preferences.getBoolean("useInternalCameraApp", false);
-            Intent intent = useInternalCameraApp
+            Intent intent = req.useInternalCameraApp
                     ? new Intent(cordova.getActivity(), CaptureImageActivity.class)
                     : new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
 
@@ -483,14 +487,14 @@ public class Capture extends CordovaPlugin {
                 try (ParcelFileDescriptor pfd = cr.openFileDescriptor(data, "r")) {
                     pfd.getFileDescriptor().sync();
 
-                    ExifInterface exif;
-                    try {
-                        exif = new ExifInterface(pfd.getFileDescriptor());
-                        if (!lastModifiedDate.isEmpty()) {
+                    if (lastModifiedDate.isEmpty()) {
+                        ExifInterface exif;
+                        try {
+                            exif = new ExifInterface(pfd.getFileDescriptor());
                             lastModifiedDate = exif.getAttribute(ExifInterface.TAG_DATETIME);
+                        } catch (IOException e) {
+                            LOG.e(LOG_TAG, "Error reading exif interface for %s", data);
                         }
-                    } catch (IOException e) {
-                        LOG.e(LOG_TAG,"Error reading exif interface for %s", data);
                     }
 
                     if (size <= 0)

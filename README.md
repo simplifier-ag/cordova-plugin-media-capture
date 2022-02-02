@@ -80,6 +80,7 @@ Although in the global scope, it is not available until after the `deviceready` 
 - capture.captureImage
 - capture.captureVideo
 - MediaFile.getFormatData
+- capture.deleteFile
 
 ## Properties
 
@@ -88,6 +89,10 @@ Although in the global scope, it is not available until after the `deviceready` 
 - __supportedImageModes__: The recording image sizes and formats supported by the device. (ConfigurationData[])
 
 - __supportedVideoModes__: The recording video resolutions and formats supported by the device. (ConfigurationData[])
+
+## Cordova preferences
+
+-__useInternalCameraApp__: Boolean - opens the internal Capture Activity. (defaults to false, Android only, if false the activity will be dynamically enabled still appear in the camera chooser when running Android < 11)
 
 ## capture.captureAudio
 
@@ -174,6 +179,9 @@ callback with an array of `MediaFile` objects describing each captured
 image file.  If the user terminates the operation before capturing an
 image, the `CaptureErrorCB` callback executes with a `CaptureError`
 object featuring a `CaptureError.CAPTURE_NO_MEDIA_FILES` error code.
+
+This version provides it's own image capture activity to lower the risk for the
+system to [kill the webview](#android-lifecycle-quirks). It's available for Android 10 and lower.
 
 ### Supported Platforms
 
@@ -331,6 +339,7 @@ capturing a video clip, the `CaptureErrorCB` callback executes with a
 - __limit__: The maximum number of images the user can capture in a single capture operation. The value must be greater than or equal to 1 (defaults to 1).
 - __confirmCapture__: Decides if a capture confirm dialog shall show up after capturing an image (defaults to true).
 - __savetogallery__: Decides if a capture is saved only to private storage or not (defaults to true, ios only).
+-__useInternalCameraApp__: Boolean - opens the internal Capture Activity. (defaults to false, Android only, if false the activity will be dynamically enabled still appear in the camera chooser)
 
 ### Example
 
@@ -534,7 +543,7 @@ The API to access media file format information is limited, so not all
 
 - __name__: The name of the file, without path information. (DOMString)
 
-- __fullPath__: The full path of the file, including the name. (DOMString)
+- __fullPath__: The content uri of the file, including the name. (DOMString)
 
 - __type__: The file's mime type (DOMString)
 
@@ -589,6 +598,24 @@ Supports the following `MediaFileData` properties:
 - __width__: Supported: image and video files only.
 
 - __duration__: Supported: audio and video files only.
+
+## MediaFile.deleteFile
+
+> Deletes content uri from media file.
+
+    mediaFile.deleteFile(
+        [SuccessCB successCallback],
+        [ErrorCB errorCallback]
+    );
+
+### Description
+
+This function asynchronously attempts to delete a given content-uri
+created by any of the capture functions.
+
+### Supported Platforms
+
+- Android
 
 ## Android Lifecycle Quirks
 
