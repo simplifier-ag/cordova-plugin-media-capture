@@ -102,7 +102,8 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
             android:theme="@style/Theme.AppCompat.NoActionBar"
-            android:enabled="false">
+            android:enabled="false"
+            android:exported="false">
                 <intent-filter>
                     <action android:name="android.media.action.IMAGE_CAPTURE" />
                     <category android:name="android.intent.category.DEFAULT" />
