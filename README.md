@@ -609,7 +609,7 @@ Supports the following `MediaFileData` properties:
 
 > Deletes content uri from media file.
 
-    mediaFile.deleteFile(
+    navigator.device.capture.deleteFile(
         file-uri
         [SuccessCB successCallback],
         [ErrorCB errorCallback]
@@ -617,7 +617,7 @@ Supports the following `MediaFileData` properties:
 
 or
 
-    mediaFile.deleteFile(
+    navigator.device.capture.deleteFile(
         content-uri
         [SuccessCB successCallback],
         [ErrorCB errorCallback]
