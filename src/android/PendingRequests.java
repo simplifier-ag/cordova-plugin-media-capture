@@ -190,7 +190,7 @@ public class PendingRequests {
         // The callback context for this plugin request
         private CallbackContext callbackContext;
 
-        private Request(int action, JSONObject options, CallbackContext callbackContext) throws JSONException {
+        private Request(int action, JSONObject options, CallbackContext callbackContext) {
             this.callbackContext = callbackContext;
             this.action = action;
 

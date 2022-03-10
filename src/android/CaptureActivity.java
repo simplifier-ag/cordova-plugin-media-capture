@@ -1,5 +1,7 @@
 package org.apache.cordova.mediacapture;
 
+import static org.apache.cordova.mediacapture.Capture.CAPTURE_IMAGE;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -29,14 +31,25 @@ import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.CamcorderProfile;
 import android.media.Image;
 import android.media.ImageReader;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.AppCompatImageButton;
+import android.support.v7.widget.AppCompatImageView;
+import android.support.v7.widget.AppCompatTextView;
+import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -45,30 +58,31 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
+import android.widget.MediaController;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatImageButton;
-import androidx.appcompat.widget.AppCompatImageView;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.content.ContextCompat;
+import android.widget.VideoView;
 
 import org.apache.cordova.BuildConfig;
 import org.apache.cordova.LOG;
 
+import java.io.FileDescriptor;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 @SuppressLint({"LogNotTimber", "ClickableViewAccessibility"})
-public class CaptureImageActivity extends Activity implements View.OnTouchListener {
-    private static final String TAG = CaptureImageActivity.class.getSimpleName();
+public class CaptureActivity extends Activity implements View.OnTouchListener {
+    private static final String TAG = CaptureActivity.class.getSimpleName();
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
@@ -84,12 +98,20 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
     private FrameLayout mCameraPreviewLayout;
     private AutoFitTextureView mCameraPreviewTexture;
     private AppCompatImageButton mChangeFlashModeButton;
+    private AppCompatImageButton takePictureButton;
 
     private ConstraintLayout mPicturePreviewLayout;
     private AppCompatImageView mCapturedImageView;
 
     private AppCompatImageButton mPictureRotateRightButton;
     private AppCompatImageButton mPictureRotateLeftButton;
+
+    private ConstraintLayout mVideoPreviewLayout;
+    private VideoView mVideoView;
+    private LinearLayoutCompat mRecordStats;
+    private AppCompatTextView mRecordingDurationView;
+    private AppCompatImageView mRecordIcon;
+    private Animation mBlink;
 
     /**
      * Flash mode
@@ -240,6 +262,44 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
     private boolean mShowBackCamera = true;
 
     /**
+     * idicates if a video is recorded
+     * false = image
+     * true = video
+     */
+    private boolean isVideo = false;
+    /**
+     * records videos
+     */
+    private MediaRecorder mMediaRecorder;
+
+    /**
+     * target FileDescriptor for video stream
+     */
+    FileDescriptor mVideoFileDescriptor;
+
+    /**
+     * recording is currently running
+     */
+    private boolean mIsRecordingVideo = false;
+
+    /**
+     * recording limit in seconds, 0 = unlimited
+     */
+    private int mDuration = 0;
+
+    /**
+     * quality of recording. 0 = low, 1 (default) = high
+     */
+    private int mQuality = 1;
+
+    /**
+     * timer for duration
+     */
+    private CountDownTimer mDurationTimer;
+
+    private MediaController mMediaController;
+
+    /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
      * {@link TextureView}.
      */
@@ -280,7 +340,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             createCameraPreviewSession();
             if (orientationEventListener == null) {
                 LOG.d(TAG, "create orientationEventListener");
-                orientationEventListener = new OrientationEventListener(CaptureImageActivity.this) {
+                orientationEventListener = new OrientationEventListener(CaptureActivity.this) {
                     @Override
                     public void onOrientationChanged(int orientation) {
                         handleOnOrientationChanged(orientation);
@@ -339,6 +399,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
     };
 
     private void handleOnOrientationChanged(int orientation) {
+        LOG.d(TAG, "handleOnOrientationChanged");
         if (orientation == OrientationEventListener.ORIENTATION_UNKNOWN)
             return;
         if (mCameraInfo == null) {
@@ -385,7 +446,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
                 return;
             }
 
-
             ImageSaver.Callback callback = new ImageSaver.Callback() {
                 @Override
                 public void onSuccess(@NonNull final Bitmap bitmap) {
@@ -402,13 +462,13 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
                         mPictureRotateRightButton.setOnClickListener(v -> {
                             setLoadingIndicator(true);
                             mBackgroundHandler.post(
-                                    new ImageSaver(CaptureImageActivity.this, bitmap, mSaveFileUri, 90f, this)
+                                    new ImageSaver(CaptureActivity.this, bitmap, mSaveFileUri, 90f, this)
                             );
                         });
                         mPictureRotateLeftButton.setOnClickListener(v -> {
                             setLoadingIndicator(true);
                             mBackgroundHandler.post(
-                                    new ImageSaver(CaptureImageActivity.this, bitmap, mSaveFileUri, -90f, this)
+                                    new ImageSaver(CaptureActivity.this, bitmap, mSaveFileUri, -90f, this)
                             );
                         });
 
@@ -427,7 +487,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             };
 
             mBackgroundHandler.post(
-                    new ImageSaver(CaptureImageActivity.this, image, mSaveFileUri, callback));
+                    new ImageSaver(CaptureActivity.this, image, mSaveFileUri, callback));
         }
     };
 
@@ -440,7 +500,6 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         public void onCaptureProgressed(@NonNull CameraCaptureSession session,
                                         @NonNull CaptureRequest request,
                                         @NonNull CaptureResult partialResult) {
-            //process(partialResult);
         }
 
         @Override
@@ -514,7 +573,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         mChangeFlashModeButton = findViewById(R.getId(this, "changeFlashMode"));
         mProgressIndicator = findViewById(R.getId(this, "progressIndicator"));
 
-        AppCompatImageButton takePictureButton = findViewById(R.getId(this, "takePicture"));
+        takePictureButton = findViewById(R.getId(this, "takePicture"));
         AppCompatImageButton switchCameraButton = findViewById(R.getId(this, "switchCamera"));
 
         mPicturePreviewLayout = findViewById(R.getId(this, "picturePreview"));
@@ -523,6 +582,16 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         AppCompatImageButton pictureRepeatButton = findViewById(R.getId(this, "pictureRepeat"));
         mPictureRotateRightButton = findViewById(R.getId(this, "rotate_right"));
         mPictureRotateLeftButton = findViewById(R.getId(this, "rotate_left"));
+
+        mVideoPreviewLayout = findViewById(R.getId(this, "videoPreview"));
+        mVideoView = findViewById(R.getId(this, "capturedVideoView"));
+        AppCompatImageButton videoAcceptButton = findViewById(R.getId(this, "videoAccept"));
+        AppCompatImageButton videoRepeatButton = findViewById(R.getId(this, "videoRepeat"));
+        AppCompatImageButton videoPlayButton = findViewById(R.getId(this, "videoPlay"));
+        mRecordIcon = findViewById(R.getId(this, "record_icon"));
+        mRecordStats = findViewById(R.getId(this, "record_stats"));
+        mRecordingDurationView = findViewById(R.getId(this, "record_duration"));
+        mBlink = AnimationUtils.loadAnimation(this, R.getAnimation(this, "mediacap_blink"));
 
         mChangeFlashModeButton.setOnClickListener(v -> {
             mUseFlash = !mUseFlash;
@@ -534,7 +603,17 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             openCamera(mCameraPreviewTexture.getWidth(), mCameraPreviewTexture.getHeight());
         });
 
-        takePictureButton.setOnClickListener(v -> takePicture());
+        takePictureButton.setOnClickListener(v -> {
+            if (isVideo) {
+                switchCameraButton.setVisibility(View.GONE);
+                if (!mIsRecordingVideo)
+                    startRecordingVideo();
+                else
+                    stopRecordingVideo();
+            } else {
+                takePicture();
+            }
+        });
 
         switchCameraButton.setOnClickListener(v -> {
             mShowBackCamera = !mShowBackCamera;
@@ -560,26 +639,113 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
             mCapturedImageView.setImageDrawable(null);
 
-            getContentResolver().delete(mSaveFileUri, null, null);
-            LOG.i(TAG, String.format("discarding %s", mSaveFileUri));
+            openCamera(mCameraPreviewTexture.getWidth(), mCameraPreviewTexture.getHeight());
+        });
+
+        videoAcceptButton.setOnClickListener(v -> {
+            Intent resultIntent = new Intent();
+            resultIntent.setData(mSaveFileUri);
+            setResult(Activity.RESULT_OK, resultIntent);
+            finish();
+        });
+
+        videoRepeatButton.setOnClickListener(v -> {
+            mVideoPreviewLayout.setVisibility(View.GONE);
+            mCameraPreviewLayout.setVisibility(View.VISIBLE);
+            switchCameraButton.setVisibility(View.VISIBLE);
 
             openCamera(mCameraPreviewTexture.getWidth(), mCameraPreviewTexture.getHeight());
+        });
+
+        mMediaController = new MediaController(this) {
+            @Override
+            public void show() {
+                videoRepeatButton.setVisibility(GONE);
+                videoAcceptButton.setVisibility(GONE);
+                videoPlayButton.setVisibility(GONE);
+                super.show();
+            }
+
+            @Override
+            public void hide() {
+                videoRepeatButton.setVisibility(VISIBLE);
+                videoAcceptButton.setVisibility(VISIBLE);
+                videoPlayButton.setVisibility(VISIBLE);
+                super.hide();
+            }
+        };
+
+        mVideoView.setMediaController(mMediaController);
+
+        mVideoView.setOnCompletionListener(mp -> {
+            if (mp.isPlaying()) {
+                videoPlayButton.setImageResource(R.getDrawable(this, "mediacap_pause"));
+            } else {
+                mp.seekTo(1);
+                videoPlayButton.setImageResource(R.getDrawable(this, "mediacap_play"));
+            }
+        });
+
+        mVideoView.setOnPreparedListener(mp -> {
+            videoPlayButton.setImageResource(R.getDrawable(this, "mediacap_play"));
+            videoPlayButton.setVisibility(View.VISIBLE);
+            mVideoView.seekTo(1); // show first frame
+            mMediaController.show(1);
+
+            //scale to video dimensions
+            final ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) mVideoView.getLayoutParams();
+            layoutParams.dimensionRatio = mp.getVideoWidth() + ":" +  mp.getVideoHeight();
+            mVideoView.setLayoutParams(layoutParams);
+        });
+
+        videoPlayButton.setOnClickListener(v -> {
+            if (mVideoView.isPlaying()) {
+                mVideoView.pause();
+                videoPlayButton.setImageResource(R.getDrawable(v.getContext(), "mediacap_play"));
+            } else {
+                mVideoView.start();
+                videoPlayButton.setImageResource(R.getDrawable(v.getContext(), "mediacap_pause"));
+            }
         });
 
         //TODO Pinch to zoom
         mCameraPreviewTexture.setOnTouchListener(this);
 
-        if (getIntent() != null && getIntent().getExtras() != null
-                && getIntent().getExtras().get(MediaStore.EXTRA_OUTPUT) != null) {
+        Intent intent = getIntent();
+
+        if (intent == null) {
+            LOG.e(TAG, "no intent data");
+            return;
+        } else if (intent.getExtras() != null
+                && intent.getExtras().get(MediaStore.EXTRA_OUTPUT) != null) {
             //Intent contain MediaStore.EXTRA_OUTPUT which tells us that the picture have to be saved in MediaStore using ContentResolver
-            mSaveFileUri = (Uri) getIntent().getExtras().get(MediaStore.EXTRA_OUTPUT);
+            mSaveFileUri = (Uri) intent.getExtras().get(MediaStore.EXTRA_OUTPUT);
         } else {
             //should not happen
             try {
-                mSaveFileUri = FileHelper.getDataUriForMediaFile(Capture.CAPTURE_IMAGE, this);
+                mSaveFileUri = FileHelper.getDataUriForMediaFile(CAPTURE_IMAGE, this);
             } catch (IllegalArgumentException e) {
                 LOG.e(TAG, "error creating data uri");
             }
+        }
+
+        switch (intent.getAction()) {
+            case MediaStore.ACTION_IMAGE_CAPTURE:
+                isVideo = false;
+                break;
+            case MediaStore.ACTION_VIDEO_CAPTURE:
+                isVideo = true;
+                try {
+                    mVideoFileDescriptor = getContentResolver().openFileDescriptor(mSaveFileUri, "rw").getFileDescriptor();
+                } catch (FileNotFoundException e) {
+                    showErrorDialog("could not create target file");
+                }
+                mDuration = intent.getIntExtra(MediaStore.EXTRA_DURATION_LIMIT, mDuration);
+
+                mQuality = intent.getIntExtra(MediaStore.EXTRA_VIDEO_QUALITY, mQuality);
+                break;
+            default:
+                break;
         }
 
         if (mSaveFileUri == null) {
@@ -588,8 +754,67 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         }
     }
 
+    private void setIsRecordingVideo (boolean isRecording) {
+        mIsRecordingVideo = isRecording;
+        runOnUiThread(() -> {
+            if (isRecording) {
+                takePictureButton.setImageResource(R.getDrawable(CaptureActivity.this,  "mediacap_stop"));
+                if (mDuration > 0) {
+                    mDurationTimer = new CountDownTimer(mDuration * 1000L, 1000) {
+                        @Override
+                        public void onTick(long millisUntilFinished) {
+                            updateDurationView(mDuration - TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished));
+                        }
+
+                        @Override
+                        public void onFinish() {
+                            Toast.makeText(CaptureActivity.this, "Capture limit reached", Toast.LENGTH_LONG).show();
+                            stopRecordingVideo();
+                            updateDurationView(0);
+                        }
+                    };
+                } else {
+                    mDurationTimer = new CountDownTimer(Long.MAX_VALUE, 1000) {
+                        int time = 0;
+                        @Override
+                        public void onTick(long millisUntilFinished) {
+                            updateDurationView(time++);
+                        }
+
+                        @Override
+                        public void onFinish() {
+                            updateDurationView(0);
+                        }
+                    };
+                }
+                mDurationTimer.start();
+            } else {
+                if (mDurationTimer != null) {
+                    mDurationTimer.cancel();
+                }
+                takePictureButton.setImageResource(R.getDrawable(CaptureActivity.this,  "mediacap_capture"));
+            }
+        });
+    }
+
+    private void updateDurationView(long elapsed) {
+        runOnUiThread(() -> {
+            if (mDuration > 0) {
+                mRecordingDurationView.setText(String.format(Locale.getDefault(),"%d / %d",
+                        elapsed, mDuration));
+            } else {
+                mRecordingDurationView.setText(String.format(Locale.getDefault(),"%d",
+                        elapsed));
+            }
+        });
+    }
+
     @Override
     public void onBackPressed() {
+        if (mIsRecordingVideo) {
+            stopRecordingVideo();
+        }
+
         if (mSaveFileUri != null) {
             try {
                 getContentResolver().delete(mSaveFileUri, null, null);
@@ -611,7 +836,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         // available, and "onSurfaceTextureAvailable" will not be called. In that case, we can open
         // a camera and start preview from here (otherwise, we wait until the surface is ready in
         // the SurfaceTextureListener).
-        if (mCameraPreviewTexture.isAvailable()) {
+        if (mCameraPreviewTexture.isAvailable() || mCameraDevice != null || mPreviewSize != null) {
             openCamera(mCameraPreviewTexture.getWidth(), mCameraPreviewTexture.getHeight());
         } else {
             mCameraPreviewTexture.setSurfaceTextureListener(mSurfaceTextureListener);
@@ -661,19 +886,13 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
                     continue;
                 }
 
-                // For still image captures, we use the largest available size.
-                Size largest = Collections.max(
-                        Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
-                        new CompareSizesByArea());
-
-                if (mImageReader != null) {
-                    mImageReader.close();
+                //default size
+                Size largest;
+                if (!isVideo) {
+                    largest = setupImageReader(map);
+                } else {
+                    largest = setUpMediaRecorder();
                 }
-
-                mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
-                        ImageFormat.JPEG, /*maxImages*/1);
-                mImageReader.setOnImageAvailableListener(
-                        mOnImageAvailableListener, mBackgroundHandler);
 
                 // Find out if we need to swap dimension to get the preview size relative to sensor
                 // coordinate.
@@ -742,14 +961,32 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
                 return;
             }
-        } catch (CameraAccessException e) {
+        } catch (CameraAccessException | IOException e) {
             LOG.e(TAG, "Setting camera outputs failed", e);
             showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
         }
     }
 
+    private Size setupImageReader(StreamConfigurationMap map) {
+        // For still image captures, we use the largest available size.
+        Size largest = Collections.max(
+                Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
+                new CompareSizesByArea());
+
+        if (mImageReader != null) {
+            mImageReader.close();
+        }
+
+        mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
+                ImageFormat.JPEG, /*maxImages*/1);
+        mImageReader.setOnImageAvailableListener(
+                mOnImageAvailableListener, mBackgroundHandler);
+
+        return largest;
+    }
+
     /**
-     * Opens the camera specified by {@link CaptureImageActivity#mCameraId}.
+     * Opens the camera specified by {@link CaptureActivity#mCameraId}.
      */
     private void openCamera(int width, int height) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -758,9 +995,10 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             return;
         }
 
-        setUpCameraOutputs(width, height, mShowBackCamera);
-        configureTransform(width, height);
         try {
+            setUpCameraOutputs(width, height, mShowBackCamera);
+            configureTransform(width, height);
+
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
@@ -807,6 +1045,13 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             showErrorDialog(String.format("Failed opening camera.\n%s", e.getMessage()));
         } finally {
             mCameraOpenCloseLock.release();
+        }
+    }
+
+    private void closePreviewSession() {
+        if (mCaptureSession != null) {
+            mCaptureSession.close();
+            mCaptureSession = null;
         }
     }
 
@@ -865,8 +1110,16 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
                     mCaptureSession = cameraCaptureSession;
                     try {
                         // Auto focus should be continuous for camera preview.
-                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                        if (!isVideo) {
+                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                        } else {
+                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO);
+                        }
+
+
+                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
                         // Flash is automatically enabled when necessary.
                         setFlashMode(mPreviewRequestBuilder);
 
@@ -893,7 +1146,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 OutputConfiguration outputConfigSurface = new OutputConfiguration(surface);
-                OutputConfiguration outputConfigImageReader = new OutputConfiguration(mImageReader.getSurface());
+                OutputConfiguration outputConfigImageReader = new OutputConfiguration(isVideo ? mMediaRecorder.getSurface() : mImageReader.getSurface());
                 SessionConfiguration config = new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
                         Arrays.asList(outputConfigSurface, outputConfigImageReader),
                         getMainExecutor(),
@@ -909,6 +1162,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
             }
         } catch (CameraAccessException e) {
             LOG.e(TAG, "Failed creating camera preview session", e);
+            showErrorDialog(e.getMessage());
         }
     }
 
@@ -952,6 +1206,139 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
     private void takePicture() {
         setLoadingIndicator(true);
         lockFocus();
+    }
+
+    public void startRecordingVideo() {
+        try {
+            if (null == mCameraDevice) {
+                return;
+            }
+            mChangeFlashModeButton.setVisibility(View.GONE);
+            mRecordStats.setVisibility(View.VISIBLE);
+            mRecordIcon.startAnimation(mBlink);
+            closePreviewSession();
+            setUpMediaRecorder();
+            SurfaceTexture texture = mCameraPreviewTexture.getSurfaceTexture();
+            assert texture != null;
+            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            List<Surface> surfaces = new ArrayList<>();
+            /**
+             * Surface for the camera preview set up
+             */
+            Surface previewSurface = new Surface(texture);
+            surfaces.add(previewSurface);
+            mPreviewRequestBuilder.addTarget(previewSurface);
+            //MediaRecorder setup for surface
+            Surface recorderSurface = mMediaRecorder.getSurface();
+            surfaces.add(recorderSurface);
+            mPreviewRequestBuilder.addTarget(recorderSurface);
+            setFlashMode(mPreviewRequestBuilder);
+            // Start a capture session
+            mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                    mCaptureSession = cameraCaptureSession;
+                    updatePreview();
+                    runOnUiThread(() -> {
+                        // Start recording
+                        try {
+                            mMediaRecorder.start();
+                            setIsRecordingVideo(true);
+                        } catch (Exception e) {
+                            LOG.e(TAG, "could not start media recorder", e);
+                            showErrorDialog(e.getMessage());
+                        }
+                    });
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
+                    LOG.e(TAG, "onConfigureFailed: Failed");
+                    showErrorDialog("Capture Session could not be created");
+                }
+            }, mBackgroundHandler);
+        } catch (CameraAccessException | IOException e) {
+            LOG.e(TAG, "Capturing still picture failed", e);
+            stopRecordingVideo();
+            showErrorDialog(e.getMessage());
+        }
+    }
+
+    private Size setUpMediaRecorder() throws IOException {
+
+        CamcorderProfile profile;
+
+        if (mQuality ==  0) {
+            profile = CamcorderProfile.get(CamcorderProfile.QUALITY_LOW);
+        } else {
+            profile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
+        }
+
+        LOG.d(TAG, "setUpMediaRecorder");
+        mMediaRecorder = new MediaRecorder();
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+
+        mMediaRecorder.setOutputFile(mVideoFileDescriptor);
+
+        mMediaRecorder.setVideoFrameRate(profile.videoFrameRate);
+
+        Size size = new Size(profile.videoFrameWidth, profile.videoFrameHeight);
+        mMediaRecorder.setVideoSize(size.getWidth(), size.getHeight());
+        mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
+        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+        mMediaRecorder.setAudioEncodingBitRate(profile.audioBitRate);
+        mMediaRecorder.setAudioSamplingRate(profile.audioSampleRate);
+        mMediaRecorder.setOrientationHint(getImageVideoRotation());
+        mMediaRecorder.prepare();
+        return size;
+    }
+
+    /**
+     * Update the camera preview. {@link #createCameraPreviewSession()} needs to be called in advance.
+     */
+    private void updatePreview() {
+        if (null == mCameraDevice) {
+            return;
+        }
+        try {
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+            HandlerThread thread = new HandlerThread("CameraPreview");
+            thread.start();
+            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void stopRecordingVideo() {
+        // UI
+        if (mCaptureSession != null) {
+            try {
+                mCaptureSession.stopRepeating();
+                mCaptureSession.abortCaptures();
+            } catch (CameraAccessException e) {
+                LOG.e(TAG, "stopRecordingVideo", e);
+            }
+            mRecordStats.setVisibility(View.GONE);
+            mRecordIcon.clearAnimation();
+        }
+
+        // Stop recording
+        if (mMediaRecorder != null) {
+            mMediaRecorder.stop();
+            mMediaRecorder.reset();
+        }
+
+        mCameraPreviewLayout.setVisibility(View.GONE);
+        mVideoPreviewLayout.setVisibility(View.VISIBLE);
+
+        mVideoView.setVideoURI(mSaveFileUri);
+
+        setIsRecordingVideo(false);
     }
 
     private void setLoadingIndicator(boolean visible) {
@@ -1084,10 +1471,8 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
         //TODO Add all flash modes (red eye, auto)
         if (mFlashSupported) {
             if (mUseFlash) {
-                requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
                 requestBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
             } else {
-                requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
                 requestBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_OFF);
             }
         }
@@ -1125,7 +1510,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
      * Shows an error message dialog.
      */
     private void showErrorDialog(String msg) {
-        new AlertDialog.Builder(CaptureImageActivity.this)
+        new AlertDialog.Builder(CaptureActivity.this)
                 .setMessage(msg)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> finish())
                 .create()
@@ -1134,13 +1519,13 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
 
     private void requestCameraPermission() {
         if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-            new AlertDialog.Builder(CaptureImageActivity.this)
+            new AlertDialog.Builder(CaptureActivity.this)
                     .setMessage("Error requesting permission")
                     .setPositiveButton(android.R.string.ok, (dialog, which) ->
-                            CaptureImageActivity.this.requestPermissions(new String[]{Manifest.permission.CAMERA},
+                            CaptureActivity.this.requestPermissions(new String[]{Manifest.permission.CAMERA},
                                     REQUEST_CAMERA_PERMISSION))
                     .setNegativeButton(android.R.string.cancel,
-                            (dialog, which) -> CaptureImageActivity.this.finish())
+                            (dialog, which) -> CaptureActivity.this.finish())
                     .create()
                     .show();
         } else {
@@ -1267,7 +1652,7 @@ public class CaptureImageActivity extends Activity implements View.OnTouchListen
      */
     private void showToast(final String text) {
         runOnUiThread(() ->
-                Toast.makeText(CaptureImageActivity.this, text, Toast.LENGTH_SHORT).show());
+                Toast.makeText(CaptureActivity.this, text, Toast.LENGTH_SHORT).show());
     }
 
     /**

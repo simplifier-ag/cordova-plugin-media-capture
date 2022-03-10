@@ -28,14 +28,13 @@ import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.Cursor;
 import android.graphics.BitmapFactory;
+import android.media.ExifInterface;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
-
-import androidx.exifinterface.media.ExifInterface;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -62,11 +61,15 @@ public class Capture extends CordovaPlugin {
     protected static final int CAPTURE_IMAGE = 1;     // Constant for capture image
     protected static final int CAPTURE_VIDEO = 2;     // Constant for capture video
 
+    //    protected static final String ACTION_CAPTURE_IMAGE = "ACTION_CAPTURE_IMAGE";
+    //    protected static final String ACTION_CAPTURE_VIDEO = "ACTION_CAPTURE_VIDEO";
+
+
     private static final String LOG_TAG = "Capture";
 
     private static final int CAPTURE_INTERNAL_ERR = 0;
     //    private static final int CAPTURE_APPLICATION_BUSY = 1;
-//    private static final int CAPTURE_INVALID_ARGUMENT = 2;
+    //    private static final int CAPTURE_INVALID_ARGUMENT = 2;
     private static final int CAPTURE_NO_MEDIA_FILES = 3;
     private static final int CAPTURE_PERMISSION_DENIED = 4;
     private static final int CAPTURE_NOT_SUPPORTED = 20;
@@ -143,6 +146,10 @@ public class Capture extends CordovaPlugin {
                 this.captureImage(pendingRequests.createRequest(CAPTURE_IMAGE, options, callbackContext));
                 break;
             case "captureVideo":
+                if (!options.has("useInternalCameraApp")) {
+                    //check cordova options
+                    options.put("useInternalCameraApp", preferences.getBoolean("useInternalCameraApp", false));
+                }
                 this.captureVideo(pendingRequests.createRequest(CAPTURE_VIDEO, options, callbackContext));
                 break;
             default:
@@ -236,10 +243,10 @@ public class Capture extends CordovaPlugin {
             PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
         } else {
             try {
-                Intent intent = new Intent(android.provider.MediaStore.Audio.Media.RECORD_SOUND_ACTION);
+                Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
 
                 requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_AUDIO, cordova.getContext());
-                intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, requestedContentUri);
                 intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                 LOG.d(LOG_TAG, "Recording audio and saving to: " + requestedContentUri);
                 this.cordova.startActivityForResult(this, intent, req.requestCode);
@@ -277,18 +284,20 @@ public class Capture extends CordovaPlugin {
             this.numPics = cursor.getCount();
             cursor.close();
 
-            Intent intent = req.useInternalCameraApp
-                    ? new Intent(cordova.getActivity(), CaptureImageActivity.class)
-                    : new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-
+            Intent intent;
+            if (req.useInternalCameraApp) {
+                intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE, requestedContentUri,cordova.getActivity(), CaptureActivity.class);
+            } else {
+                intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            }
 
             requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_IMAGE, cordova.getContext());
-            intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, requestedContentUri);
             intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             LOG.d(LOG_TAG, "Taking a picture and saving to: " + requestedContentUri);
 
             //enable activity's intent filter to appear in camera app chooser dialog
-            setActivityEnabled(this.cordova.getActivity(), CaptureImageActivity.class.getCanonicalName(), true);
+            setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), true);
 
             this.cordova.startActivityForResult(this, intent, req.requestCode);
         }
@@ -310,19 +319,28 @@ public class Capture extends CordovaPlugin {
         if (needExternalStoragePermission || needWriteExternalStoragePermission || needRecordAudioPermission || needCameraPermission) {
             PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA});
         } else {
-            Intent intent = new Intent(android.provider.MediaStore.ACTION_VIDEO_CAPTURE);
+            Intent intent = req.useInternalCameraApp
+                    ? new Intent(MediaStore.ACTION_VIDEO_CAPTURE, requestedContentUri, cordova.getActivity(), CaptureActivity.class)
+                    : new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
 
             requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_VIDEO, cordova.getContext());
-            intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, requestedContentUri);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, requestedContentUri);
             intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
             intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, req.duration);
             intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, req.quality);
             LOG.d(LOG_TAG, "Recording a video and saving to: " + requestedContentUri);
+
+            //enable activity's intent filter to appear in camera app chooser dialog
+            setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), true);
+
             this.cordova.startActivityForResult(this, intent, req.requestCode);
         }
     }
 
+    /**
+     * Deletes a file or content uri from string
+     */
     public void deleteFile(String contentUri, CallbackContext callbackContext) {
         if (cordova.getContext().getContentResolver().delete(Uri.parse(contentUri), null, null) <= 0) {
             File file = new File(contentUri);
@@ -353,9 +371,9 @@ public class Capture extends CordovaPlugin {
     public void onActivityResult(int requestCode, int resultCode, final Intent intent) {
         final Request req = pendingRequests.get(requestCode);
 
-        if (CAPTURE_IMAGE == req.action) {
+        if (CAPTURE_IMAGE == req.action || CAPTURE_VIDEO == req.action) {
             //disable ImageActivity alias to prevent other apps using this one
-            setActivityEnabled(this.cordova.getActivity(), CaptureImageActivity.class.getCanonicalName(), false);
+            setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), false);
         }
 
         // Result received okay
@@ -487,7 +505,7 @@ public class Capture extends CordovaPlugin {
                 try (ParcelFileDescriptor pfd = cr.openFileDescriptor(data, "r")) {
                     pfd.getFileDescriptor().sync();
 
-                    if (lastModifiedDate.isEmpty()) {
+                    if ( lastModifiedDate.isEmpty()) {
                         ExifInterface exif;
                         try {
                             exif = new ExifInterface(pfd.getFileDescriptor());
@@ -574,9 +592,9 @@ public class Capture extends CordovaPlugin {
      */
     private Uri whichContentStore() {
         if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-            return android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+            return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         } else {
-            return android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI;
+            return MediaStore.Images.Media.INTERNAL_CONTENT_URI;
         }
     }
 

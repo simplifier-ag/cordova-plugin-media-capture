@@ -79,4 +79,14 @@ Capture.prototype.captureVideo = function (successCallback, errorCallback, optio
     _capture('captureVideo', successCallback, errorCallback, options);
 };
 
+/**
+ * Delete a file
+ * @param {Function} successCB
+ * @param {Function} errorCB
+ * @param {String} file or content-uri
+ */
+ Capture.prototype.deleteFile = function (file, successCallback, errorCallback) {
+	_capture('deleteFile', successCallback, errorCallback, file);
+};
+
 module.exports = new Capture();

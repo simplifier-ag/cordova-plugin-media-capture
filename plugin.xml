@@ -31,7 +31,7 @@
     <issue>https://github.com/apache/cordova-plugin-media-capture/issues</issue>
 
     <engines>
-        <engine name="cordova-android" version=">=10.0.0" />
+        <engine name="cordova-android" version=">=6.3.0" />
     </engines>
 
     <dependency id="cordova-plugin-file" version="^6.0.0" />
@@ -97,7 +97,7 @@
 
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <activity
-            android:name="org.apache.cordova.mediacapture.CaptureImageActivity"
+            android:name="org.apache.cordova.mediacapture.CaptureActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
@@ -108,6 +108,10 @@
                     <action android:name="android.media.action.IMAGE_CAPTURE" />
                     <category android:name="android.intent.category.DEFAULT" />
                 </intent-filter>
+                <intent-filter>
+                    <action android:name="android.media.action.VIDEO_CAPTURE" />
+                    <category android:name="android.intent.category.DEFAULT" />
+                </intent-filter>
             </activity>
         </config-file>
 
@@ -115,20 +119,27 @@
 
         <source-file src="src/android/AutoFitTextureView.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/Capture.java" target-dir="src/org/apache/cordova/mediacapture" />
-        <source-file src="src/android/CaptureImageActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/CaptureActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileProvider.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/ImageSaver.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/PendingRequests.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/R.java" target-dir="src/org/apache/cordova/mediacapture" />
+
+        <resource-file src="src/android/res/anim/mediacap_blink.xml" target="res/anim/mediacap_blink.xml"/>
     
         <resource-file src="src/android/res/drawable/mediacap_capture.xml" target="res/drawable/mediacap_capture.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_check.xml" target="res/drawable/mediacap_check.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_flash.xml" target="res/drawable/mediacap_flash.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_flash_off.xml" target="res/drawable/mediacap_flash_off.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_pause.xml" target="res/drawable/mediacap_pause.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_play.xml" target="res/drawable/mediacap_play.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_repeat.xml" target="res/drawable/mediacap_repeat.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_record.xml" target="res/drawable/mediacap_record.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_rotate_left.xml" target="res/drawable/mediacap_rotate_left.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_rotate_right.xml" target="res/drawable/mediacap_rotate_right.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_shape_rounded.xml" target="res/drawable/mediacap_shape_rounded.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_stop.xml" target="res/drawable/mediacap_stop.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
         <resource-file src="src/android/res/xml/mediacapture_provider_paths.xml" target="res/xml/mediacapture_provider_paths.xml" />
         <resource-file src="src/android/res/layout/camera_layout.xml" target="res/layout/camera_layout.xml"/>

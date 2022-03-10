@@ -1,203 +1,302 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/progressIndicator"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="false"
-        android:elevation="2dp"
-        android:focusable="false"
-        android:focusableInTouchMode="false"
-        android:animateLayoutChanges="true"
-        android:translationZ="2dp"
-        android:visibility="gone"
-        tools:visibility="visible">
+	<android.support.constraint.ConstraintLayout
+		android:id="@+id/progressIndicator"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:animateLayoutChanges="true"
+		android:clickable="false"
+		android:elevation="2dp"
+		android:focusable="false"
+		android:focusableInTouchMode="false"
+		android:translationZ="2dp"
+		android:visibility="gone"
+		tools:visibility="visible">
 
-        <com.github.mmin18.widget.RealtimeBlurView
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:realtimeBlurRadius="20dp"
-            app:realtimeOverlayColor="#33555555"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+		<com.github.mmin18.widget.RealtimeBlurView
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			app:layout_constraintBottom_toBottomOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="parent"
+			app:realtimeBlurRadius="20dp"
+			app:realtimeOverlayColor="#33555555" />
 
-        <androidx.appcompat.widget.AppCompatButton
-            style="null"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@android:color/transparent"
-            android:clickable="true"
-            android:defaultFocusHighlightEnabled="true"
-            android:enabled="true"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:focusedByDefault="true"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+		<android.support.v7.widget.AppCompatButton
+			style="null"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			android:background="@android:color/transparent"
+			android:clickable="true"
+			android:defaultFocusHighlightEnabled="true"
+			android:enabled="true"
+			android:focusable="true"
+			android:focusableInTouchMode="true"
+			android:focusedByDefault="true"
+			app:layout_constraintBottom_toBottomOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="parent" />
 
-        <ProgressBar
-            style="?android:attr/progressBarStyle"
-            android:layout_width="35dp"
-            android:layout_height="35dp"
-            android:elevation="2dp"
-            android:indeterminateDuration="5500"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+		<ProgressBar
+			style="?android:attr/progressBarStyle"
+			android:layout_width="35dp"
+			android:layout_height="35dp"
+			android:elevation="2dp"
+			android:indeterminateDuration="5500"
+			app:layout_constraintBottom_toBottomOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="parent" />
+	</android.support.constraint.ConstraintLayout>
 
-    <FrameLayout
-        android:id="@+id/cameraPreview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+	<FrameLayout
+		android:id="@+id/cameraPreview"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent">
 
-        <org.apache.cordova.mediacapture.AutoFitTextureView
-            android:id="@+id/cameraPreviewTexture"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            />
+		<org.apache.cordova.mediacapture.AutoFitTextureView
+			android:id="@+id/cameraPreviewTexture"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center" />
 
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/cameraControlBar"
-            android:layout_width="match_parent"
-            android:layout_height="112dp"
-            android:background="#cc4285f4"
-            android:layout_gravity="bottom">
+		<android.support.constraint.ConstraintLayout
+			android:id="@+id/cameraControlBar"
+			android:layout_width="match_parent"
+			android:layout_height="112dp"
+			android:layout_gravity="bottom"
+			android:background="#cc4285f4">
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/changeFlashMode"
-                android:layout_width="70dp"
-                android:layout_height="0dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginEnd="24dp"
-                android:layout_marginBottom="16dp"
-                android:background="?android:selectableItemBackground"
-                android:scaleType="fitCenter"
-                app:layout_constraintBottom_toBottomOf="@+id/takePicture"
-                app:layout_constraintEnd_toStartOf="@id/takePicture"
-                app:layout_constraintTop_toTopOf="@+id/takePicture"
-                app:layout_constraintVertical_bias="0.0"
-                app:srcCompat="@drawable/mediacap_flash_off" />
+			<android.support.v7.widget.AppCompatImageButton
+				android:id="@+id/changeFlashMode"
+				android:layout_width="70dp"
+				android:layout_height="0dp"
+				android:layout_marginTop="16dp"
+				android:layout_marginEnd="24dp"
+				android:layout_marginBottom="16dp"
+				android:background="?android:selectableItemBackground"
+				android:scaleType="fitCenter"
+				app:layout_constraintBottom_toBottomOf="@+id/takePicture"
+				app:layout_constraintEnd_toStartOf="@id/takePicture"
+				app:layout_constraintTop_toTopOf="@+id/takePicture"
+				app:layout_constraintVertical_bias="0.0"
+				app:srcCompat="@drawable/mediacap_flash_off" />
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/takePicture"
-                android:layout_width="100dp"
-                android:layout_height="0dp"
-                android:layout_gravity="center"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
-                android:background="?android:selectableItemBackground"
-                android:scaleType="fitCenter"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/mediacap_capture" />
+			<android.support.v7.widget.AppCompatImageButton
+				android:id="@+id/takePicture"
+				android:layout_width="100dp"
+				android:layout_height="0dp"
+				android:layout_gravity="center"
+				android:layout_marginTop="16dp"
+				android:layout_marginBottom="16dp"
+				android:background="?android:selectableItemBackground"
+				android:scaleType="fitCenter"
+				app:layout_constraintBottom_toBottomOf="parent"
+				app:layout_constraintEnd_toEndOf="parent"
+				app:layout_constraintStart_toStartOf="parent"
+				app:layout_constraintTop_toTopOf="parent"
+				app:srcCompat="@drawable/mediacap_capture" />
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/switchCamera"
-                android:layout_width="70dp"
-                android:layout_height="0dp"
-                android:layout_marginStart="24dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
-                android:background="?android:selectableItemBackground"
-                android:scaleType="fitCenter"
-                app:layout_constraintBottom_toBottomOf="@+id/takePicture"
-                app:layout_constraintStart_toEndOf="@+id/takePicture"
-                app:layout_constraintTop_toTopOf="@+id/takePicture"
-                app:layout_constraintVertical_bias="0.0"
-                app:srcCompat="@drawable/mediacap_switch" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </FrameLayout>
+			<android.support.v7.widget.AppCompatImageButton
+				android:id="@+id/switchCamera"
+				android:layout_width="70dp"
+				android:layout_height="0dp"
+				android:layout_marginStart="24dp"
+				android:layout_marginTop="16dp"
+				android:layout_marginBottom="16dp"
+				android:background="?android:selectableItemBackground"
+				android:scaleType="fitCenter"
+				app:layout_constraintBottom_toBottomOf="@+id/takePicture"
+				app:layout_constraintStart_toEndOf="@+id/takePicture"
+				app:layout_constraintTop_toTopOf="@+id/takePicture"
+				app:layout_constraintVertical_bias="0.0"
+				app:srcCompat="@drawable/mediacap_switch" />
+		</android.support.constraint.ConstraintLayout>
+	</FrameLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/picturePreview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#444444"
-        android:visibility="gone"
-        tools:visibility="visible">
+	<android.support.constraint.ConstraintLayout
+		android:id="@+id/picturePreview"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:background="#444444"
+		android:visibility="gone"
+		tools:visibility="gone">
 
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/capturedImageView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+		<android.support.v7.widget.AppCompatImageView
+			android:id="@+id/capturedImageView"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent" />
 
-        <androidx.appcompat.widget.AppCompatImageButton
-            android:id="@+id/pictureAccept"
-            style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_marginBottom="8dp"
-            android:background="?android:selectableItemBackground"
-            android:scaleType="fitCenter"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:srcCompat="@drawable/mediacap_check" />
+		<android.support.v7.widget.AppCompatImageButton
+			android:id="@+id/pictureAccept"
+			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
+			android:layout_width="100dp"
+			android:layout_height="100dp"
+			android:layout_marginBottom="8dp"
+			android:background="?android:selectableItemBackground"
+			android:scaleType="fitCenter"
+			app:layout_constraintBottom_toBottomOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:srcCompat="@drawable/mediacap_check" />
 
-        <androidx.appcompat.widget.AppCompatImageButton
-            android:id="@+id/pictureRepeat"
-            style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginTop="26dp"
-            android:layout_marginEnd="26dp"
-            android:layout_marginBottom="26dp"
-            android:layout_marginStart="16dp"
-            android:scaleType="fitCenter"
-            android:background="?android:selectableItemBackground"
-            app:layout_constraintBottom_toBottomOf="@+id/pictureAccept"
-            app:layout_constraintEnd_toStartOf="@id/pictureAccept"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/pictureAccept"
-            app:srcCompat="@drawable/mediacap_repeat" />
+		<android.support.v7.widget.AppCompatImageButton
+			android:id="@+id/pictureRepeat"
+			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			android:layout_marginStart="16dp"
+			android:layout_marginTop="26dp"
+			android:layout_marginEnd="26dp"
+			android:layout_marginBottom="26dp"
+			android:background="?android:selectableItemBackground"
+			android:scaleType="fitCenter"
+			app:layout_constraintBottom_toBottomOf="@+id/pictureAccept"
+			app:layout_constraintEnd_toStartOf="@id/pictureAccept"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="@+id/pictureAccept"
+			app:srcCompat="@drawable/mediacap_repeat" />
 
-        <androidx.appcompat.widget.AppCompatImageButton
-            android:id="@+id/rotate_left"
-            style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginTop="26dp"
-            android:layout_marginEnd="26dp"
-            android:layout_marginBottom="26dp"
-            android:layout_marginStart="16dp"
-            android:scaleType="fitCenter"
-            android:background="?android:selectableItemBackground"
-            app:layout_constraintBottom_toBottomOf="@+id/pictureAccept"
-            app:layout_constraintEnd_toStartOf="@id/rotate_right"
-            app:layout_constraintStart_toEndOf="@id/pictureAccept"
-            app:layout_constraintTop_toTopOf="@+id/pictureAccept"
-            app:srcCompat="@drawable/mediacap_rotate_left" />
+		<android.support.v7.widget.AppCompatImageButton
+			android:id="@+id/rotate_left"
+			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			android:layout_marginStart="16dp"
+			android:layout_marginTop="26dp"
+			android:layout_marginEnd="26dp"
+			android:layout_marginBottom="26dp"
+			android:background="?android:selectableItemBackground"
+			android:scaleType="fitCenter"
+			app:layout_constraintBottom_toBottomOf="@+id/pictureAccept"
+			app:layout_constraintEnd_toStartOf="@id/rotate_right"
+			app:layout_constraintStart_toEndOf="@id/pictureAccept"
+			app:layout_constraintTop_toTopOf="@+id/pictureAccept"
+			app:srcCompat="@drawable/mediacap_rotate_left" />
 
-        <androidx.appcompat.widget.AppCompatImageButton
-            android:id="@+id/rotate_right"
-            style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginTop="26dp"
-            android:layout_marginEnd="26dp"
-            android:layout_marginBottom="26dp"
-            android:layout_marginStart="16dp"
-            android:scaleType="fitCenter"
-            android:background="?android:selectableItemBackground"
-            app:layout_constraintBottom_toBottomOf="@+id/pictureAccept"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/rotate_left"
-            app:layout_constraintTop_toTopOf="@+id/pictureAccept"
-            app:srcCompat="@drawable/mediacap_rotate_right" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+		<android.support.v7.widget.AppCompatImageButton
+			android:id="@+id/rotate_right"
+			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			android:layout_marginStart="16dp"
+			android:layout_marginTop="26dp"
+			android:layout_marginEnd="26dp"
+			android:layout_marginBottom="26dp"
+			android:background="?android:selectableItemBackground"
+			android:scaleType="fitCenter"
+			app:layout_constraintBottom_toBottomOf="@+id/pictureAccept"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toEndOf="@id/rotate_left"
+			app:layout_constraintTop_toTopOf="@+id/pictureAccept"
+			app:srcCompat="@drawable/mediacap_rotate_right" />
+	</android.support.constraint.ConstraintLayout>
+
+	<android.support.constraint.ConstraintLayout
+		android:id="@+id/videoPreview"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:background="#444444"
+		android:visibility="gone"
+		tools:visibility="visible">
+
+		<VideoView
+			android:id="@+id/capturedVideoView"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			app:layout_constraintBottom_toBottomOf="parent"
+			app:layout_constraintDimensionRatio="4:3"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="parent"/>
+
+
+		<android.support.v7.widget.AppCompatImageButton
+			android:id="@+id/videoAccept"
+			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
+			android:layout_width="100dp"
+			android:layout_height="100dp"
+			android:layout_marginBottom="8dp"
+			android:background="?android:selectableItemBackground"
+			android:scaleType="fitCenter"
+			app:layout_constraintBottom_toBottomOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:srcCompat="@drawable/mediacap_check" />
+
+		<android.support.v7.widget.AppCompatImageButton
+			android:id="@+id/videoRepeat"
+			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			android:layout_marginStart="16dp"
+			android:layout_marginTop="26dp"
+			android:layout_marginEnd="26dp"
+			android:layout_marginBottom="26dp"
+			android:background="?android:selectableItemBackground"
+			android:scaleType="fitCenter"
+			app:layout_constraintBottom_toBottomOf="@+id/videoAccept"
+			app:layout_constraintEnd_toStartOf="@id/videoAccept"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="@+id/videoAccept"
+			app:srcCompat="@drawable/mediacap_repeat" />
+
+		<android.support.v7.widget.AppCompatImageButton
+			android:id="@+id/videoPlay"
+			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			android:layout_marginStart="16dp"
+			android:layout_marginTop="26dp"
+			android:layout_marginEnd="26dp"
+			android:layout_marginBottom="26dp"
+			android:background="?android:selectableItemBackground"
+			android:scaleType="fitCenter"
+			android:visibility="gone"
+			app:layout_constraintBottom_toBottomOf="@+id/videoAccept"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toEndOf="@id/videoAccept"
+			app:layout_constraintTop_toTopOf="@+id/videoAccept"
+			app:srcCompat="@drawable/mediacap_play" />
+	</android.support.constraint.ConstraintLayout>
+
+
+	<android.support.v7.widget.LinearLayoutCompat
+		android:id="@+id/record_stats"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:background="@drawable/mediacap_shape_rounded"
+		android:backgroundTint="#804E4E4E"
+		android:orientation="horizontal"
+		android:padding="8dp"
+		android:visibility="gone"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent"
+		tools:visibility="visible"
+        android:layout_margin="8dp"
+		>
+
+		<android.support.v7.widget.AppCompatImageView
+			android:id="@+id/record_icon"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:src="@drawable/mediacap_record" />
+
+		<android.support.v7.widget.AppCompatTextView
+			android:id="@+id/record_duration"
+			android:layout_width="wrap_content"
+			android:layout_height="match_parent"
+			android:gravity="center"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+			tools:text="42/69" />
+	</android.support.v7.widget.LinearLayoutCompat>
 
 </FrameLayout>

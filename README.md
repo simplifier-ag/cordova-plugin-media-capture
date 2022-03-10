@@ -339,7 +339,7 @@ capturing a video clip, the `CaptureErrorCB` callback executes with a
 - __limit__: The maximum number of images the user can capture in a single capture operation. The value must be greater than or equal to 1 (defaults to 1).
 - __confirmCapture__: Decides if a capture confirm dialog shall show up after capturing an image (defaults to true).
 - __savetogallery__: Decides if a capture is saved only to private storage or not (defaults to true, ios only).
--__useInternalCameraApp__: Boolean - opens the internal Capture Activity. (defaults to false, Android only, if false the activity will be dynamically enabled still appear in the camera chooser)
+- __useInternalCameraApp__: Boolean - opens the internal Capture Activity. (defaults to false, Android only, if false the activity will be dynamically enabled still appear in the camera chooser - true calls internal capture activity directly)
 
 ### Example
 
@@ -361,8 +361,8 @@ capturing a video clip, the `CaptureErrorCB` callback executes with a
 ### Properties
 
 - __limit__: The maximum number of video clips the device's user can capture in a single capture operation.  The value must be greater than or equal to 1 (defaults to 1).
-
 - __duration__: The maximum duration of a video clip, in seconds.
+- __useInternalCameraApp__: Boolean - opens the internal Capture Activity. (defaults to false, Android only, if false the activity will be dynamically enabled still appear in the camera chooser - true calls internal capture activity directly)
 
 ### Example
 

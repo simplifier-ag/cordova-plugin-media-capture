@@ -25,9 +25,8 @@ import static org.apache.cordova.mediacapture.Capture.CAPTURE_VIDEO;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Environment;
+import android.support.annotation.Nullable;
 import android.webkit.MimeTypeMap;
-
-import androidx.annotation.Nullable;
 
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.LOG;
