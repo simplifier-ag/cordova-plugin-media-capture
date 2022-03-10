@@ -52,8 +52,14 @@ Although in the global scope, it is not available until after the `deviceready` 
     }
 
 ## Installation
+__Cordova <=9.1.0__
 
     cordova plugin add cordova-plugin-media-capture
+
+__Cordova > 10.0.0__
+
+    cordova plugin add cordova-plugin-media-capture
+    cordova plugin add cordova-plugin-androidx-adapter
 
 ## Supported Platforms
 
