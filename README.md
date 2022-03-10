@@ -610,6 +610,15 @@ Supports the following `MediaFileData` properties:
 > Deletes content uri from media file.
 
     mediaFile.deleteFile(
+        file-uri
+        [SuccessCB successCallback],
+        [ErrorCB errorCallback]
+    );
+
+or
+
+    mediaFile.deleteFile(
+        content-uri
         [SuccessCB successCallback],
         [ErrorCB errorCallback]
     );
