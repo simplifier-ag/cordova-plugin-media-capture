@@ -299,6 +299,8 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
 
     private MediaController mMediaController;
 
+    boolean mRestartCamera = true;
+
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
      * {@link TextureView}.
@@ -609,7 +611,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
                 if (!mIsRecordingVideo)
                     startRecordingVideo();
                 else
-                    stopRecordingVideo();
+                    stopRecordingVideo(true);
             } else {
                 takePicture();
             }
@@ -769,7 +771,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
                         @Override
                         public void onFinish() {
                             Toast.makeText(CaptureActivity.this, "Capture limit reached", Toast.LENGTH_LONG).show();
-                            stopRecordingVideo();
+                            stopRecordingVideo(true);
                             updateDurationView(0);
                         }
                     };
@@ -812,7 +814,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
     @Override
     public void onBackPressed() {
         if (mIsRecordingVideo) {
-            stopRecordingVideo();
+            stopRecordingVideo(false);
         }
 
         if (mSaveFileUri != null) {
@@ -836,15 +838,23 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
         // available, and "onSurfaceTextureAvailable" will not be called. In that case, we can open
         // a camera and start preview from here (otherwise, we wait until the surface is ready in
         // the SurfaceTextureListener).
-        if (mCameraPreviewTexture.isAvailable() || mCameraDevice != null || mPreviewSize != null) {
-            openCamera(mCameraPreviewTexture.getWidth(), mCameraPreviewTexture.getHeight());
-        } else {
-            mCameraPreviewTexture.setSurfaceTextureListener(mSurfaceTextureListener);
+        if (mRestartCamera) {
+            if (mCameraPreviewTexture.isAvailable() || mCameraDevice != null || mPreviewSize != null) {
+                openCamera(mCameraPreviewTexture.getWidth(), mCameraPreviewTexture.getHeight());
+            } else {
+                mCameraPreviewTexture.setSurfaceTextureListener(mSurfaceTextureListener);
+            }
         }
+
     }
 
     @Override
     public void onPause() {
+        if (mIsRecordingVideo) {
+            stopRecordingVideo(true);
+            mRestartCamera = false;
+        }
+
         closeCamera();
         stopBackgroundThread();
         super.onPause();
@@ -1156,7 +1166,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
             } else {
                 // Marked as deprecated since API level 30
                 // Here, we create a CameraCaptureSession for camera preview.
-                mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
+                mCameraDevice.createCaptureSession(Arrays.asList(surface, isVideo ? mMediaRecorder.getSurface() : mImageReader.getSurface()),
                         stateCallback, null
                 );
             }
@@ -1209,6 +1219,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
     }
 
     public void startRecordingVideo() {
+        mRestartCamera = true;
         try {
             if (null == mCameraDevice) {
                 return;
@@ -1260,7 +1271,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
             }, mBackgroundHandler);
         } catch (CameraAccessException | IOException e) {
             LOG.e(TAG, "Capturing still picture failed", e);
-            stopRecordingVideo();
+            stopRecordingVideo(false);
             showErrorDialog(e.getMessage());
         }
     }
@@ -1314,7 +1325,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
         }
     }
 
-    public void stopRecordingVideo() {
+    public void stopRecordingVideo(boolean showPreview) {
         // UI
         if (mCaptureSession != null) {
             try {
@@ -1331,12 +1342,14 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
         if (mMediaRecorder != null) {
             mMediaRecorder.stop();
             mMediaRecorder.reset();
+            mMediaRecorder.release();
         }
 
-        mCameraPreviewLayout.setVisibility(View.GONE);
-        mVideoPreviewLayout.setVisibility(View.VISIBLE);
-
-        mVideoView.setVideoURI(mSaveFileUri);
+        if(showPreview) {
+            mCameraPreviewLayout.setVisibility(View.GONE);
+            mVideoPreviewLayout.setVisibility(View.VISIBLE);
+            mVideoView.setVideoURI(mSaveFileUri);
+        }
 
         setIsRecordingVideo(false);
     }

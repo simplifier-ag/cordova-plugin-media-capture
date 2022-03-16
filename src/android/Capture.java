@@ -377,12 +377,14 @@ public class Capture extends CordovaPlugin {
         }
 
         // Result received okay
-        if (resultCode == Activity.RESULT_OK && intent != null) {
+        if (resultCode == Activity.RESULT_OK) {
             Runnable processActivityResult = () -> {
                 //data might be empty, but assuming RESULT_OK the requested content uri should point to the created media file
-                Uri resultData = intent.getData();
-                if (resultData == null) {
+                Uri resultData;
+                if (intent == null || intent.getData() == null) {
                     resultData = requestedContentUri;
+                } else {
+                    resultData = intent.getData();
                 }
                 switch (req.action) {
                     case CAPTURE_AUDIO:
@@ -399,6 +401,7 @@ public class Capture extends CordovaPlugin {
 
             this.cordova.getThreadPool().execute(processActivityResult);
         }
+
         // If canceled
         else if (resultCode == Activity.RESULT_CANCELED) {
             // If we have partial results send them back to the user
