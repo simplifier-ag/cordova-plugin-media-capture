@@ -99,7 +99,6 @@
             <activity
             android:name="org.apache.cordova.mediacapture.CaptureActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-            android:excludeFromRecents="true"
             android:launchMode="singleTop"
             android:theme="@style/Theme.AppCompat.NoActionBar"
             android:enabled="false"
