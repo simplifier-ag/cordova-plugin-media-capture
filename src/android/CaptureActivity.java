@@ -726,7 +726,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
             //should not happen
             try {
                 mSaveFileUri = FileHelper.getDataUriForMediaFile(CAPTURE_IMAGE, this);
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException | IOException e) {
                 LOG.e(TAG, "error creating data uri");
             }
         }
@@ -1103,7 +1103,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
         final Surface surface = new Surface(texture);
 
         try {
-            // We set up a CaptureRequest.Builder with the output Surface.
+            // We set up a CaptureReCaptureRequest.Builder with the output Surface.
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
 

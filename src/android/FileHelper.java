@@ -32,6 +32,7 @@ import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.LOG;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -79,7 +80,7 @@ public class FileHelper {
      * @return content://-uri for a given media file type
      */
     @Nullable
-    public static Uri getDataUriForMediaFile(int type, Context context) throws IllegalArgumentException {
+    public static Uri getDataUriForMediaFile(int type, Context context) throws IllegalArgumentException, IOException {
 
         String applicationId = context.getPackageName();
         File mediaStorageDir;
@@ -112,12 +113,13 @@ public class FileHelper {
             case CAPTURE_VIDEO: {
                 mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_MOVIES), applicationId);
-                String fileName = "VID_" + timeStamp + ".mp4";
+                String fileName = "VID_" + timeStamp +".mp4";
                 File video = new File(mediaStorageDir, fileName);
 
                 uri = FileProvider.getUriForFile(context,
                         applicationId + ".cordova.plugin.mediacapture.provider",
                         video);
+
             }
             break;
             default:
