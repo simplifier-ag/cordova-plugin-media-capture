@@ -163,7 +163,7 @@
         <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
         <resource-file src="src/android/res/xml/mediacapture_provider_paths.xml" target="res/xml/mediacapture_provider_paths.xml" />
 
-        <resource-file src="src/android/res/layout/audio_recorder_layout.xml" target="res/layout/camera_layout.xml"/>
+        <resource-file src="src/android/res/layout/audio_recorder_layout.xml" target="res/layout/audio_recorder_layout.xml"/>
         <resource-file src="src/android/res/layout/camera_layout.xml" target="res/layout/camera_layout.xml"/>
 
         <js-module src="www/android/init.js" name="init">
