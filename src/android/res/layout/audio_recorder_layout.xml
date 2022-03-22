@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
+
+	<org.apache.cordova.mediacapture.VisualizerView
+		android:id="@+id/visualizer"
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		app:layout_constraintBottom_toTopOf="@+id/recordTimer"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent" />
+
+	<android.support.v7.widget.AppCompatTextView
+		android:id="@+id/recordTimer"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="20dp"
+		android:textSize="22sp"
+		app:layout_constraintBottom_toTopOf="@+id/toggle_recording_button"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		tools:text="00:00" />
+
+	<android.support.v7.widget.AppCompatImageButton
+		android:id="@+id/toggle_recording_button"
+		android:layout_width="64dp"
+		android:layout_height="64dp"
+		android:layout_marginBottom="24dp"
+		android:background="@drawable/mediacap_circle_background"
+		android:elevation="8dp"
+		android:padding="12dp"
+		android:src="@drawable/mediacap_microphone"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent" />
+
+	<android.support.v7.widget.AppCompatImageButton
+		android:id="@+id/toggle_pause_button"
+		android:layout_width="56dp"
+		android:layout_height="56dp"
+		android:layout_marginBottom="24dp"
+		android:background="@drawable/mediacap_circle_background"
+		android:elevation="8dp"
+		android:padding="16dp"
+		android:src="@drawable/mediacap_pause"
+		android:visibility="invisible"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toEndOf="@+id/toggle_recording_button"
+		tools:visibility="visible" />
+
+</android.support.constraint.ConstraintLayout>
