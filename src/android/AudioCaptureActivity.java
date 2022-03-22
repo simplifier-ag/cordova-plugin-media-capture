@@ -5,6 +5,8 @@ import static org.apache.cordova.mediacapture.Capture.CAPTURE_AUDIO;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.media.MediaRecorder;
 import android.net.Uri;
@@ -182,7 +184,15 @@ public class AudioCaptureActivity extends Activity {
 				toggleRecordButton.setImageResource(R.getDrawable(AudioCaptureActivity.this, "mediacap_stop"));
 				togglePauseButton.setVisibility(View.VISIBLE);
 
+				int currentOrientation = getResources().getConfiguration().orientation;
+				if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
+					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+				} else {
+					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
+				}
+
 			} else {
+				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
 				recordTimer.setVisibility(View.INVISIBLE);
 				toggleRecordButton.setImageResource(R.getDrawable(AudioCaptureActivity.this, "mediacap_microphone"));
 				togglePauseButton.setVisibility(View.INVISIBLE);
