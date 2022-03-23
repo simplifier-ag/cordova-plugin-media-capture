@@ -132,7 +132,7 @@ _Bool saveToGallery = YES;
     // options could contain limit and mode neither of which are supported at this time
     // taking more than one picture (limit) is only supported if provide own controls via cameraOverlayView property
     // can support mode in OS
-    
+
     //prevents copy of the image beeing save to the gallery
     if (![options isKindOfClass:[NSNull class]] && [options objectForKey:@"savetogallery"]) {
         saveToGallery = [[options objectForKey:@"savetogallery"] boolValue];
@@ -221,7 +221,7 @@ _Bool saveToGallery = YES;
 
     //reset options
     saveToGallery =  true;
-    
+
     return result;
 }
 
@@ -657,81 +657,6 @@ _Bool saveToGallery = YES;
     return nil;
 }
 
-- (void)loadView
-{
-	if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
-
-    // create view and display
-    CGRect viewRect = [[UIScreen mainScreen] bounds];
-    UIView* tmp = [[UIView alloc] initWithFrame:viewRect];
-
-    // make backgrounds
-    NSString* microphoneResource = @"CDVCapture.bundle/microphone";
-
-    BOOL isIphone5 = ([[UIScreen mainScreen] bounds].size.width == 568 && [[UIScreen mainScreen] bounds].size.height == 320) || ([[UIScreen mainScreen] bounds].size.height == 568 && [[UIScreen mainScreen] bounds].size.width == 320);
-    if (isIphone5) {
-        microphoneResource = @"CDVCapture.bundle/microphone-568h";
-    }
-
-    NSBundle* cdvBundle = [NSBundle bundleForClass:[CDVCapture class]];
-    UIImage* microphone = [UIImage imageNamed:[self resolveImageResource:microphoneResource] inBundle:cdvBundle compatibleWithTraitCollection:nil];
-    UIView* microphoneView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, viewRect.size.width, microphone.size.height)];
-    [microphoneView setBackgroundColor:[UIColor colorWithPatternImage:microphone]];
-    [microphoneView setUserInteractionEnabled:NO];
-    [microphoneView setIsAccessibilityElement:NO];
-    [tmp addSubview:microphoneView];
-
-    // add bottom bar view
-    UIImage* grayBkg = [UIImage imageNamed:[self resolveImageResource:@"CDVCapture.bundle/controls_bg"] inBundle:cdvBundle compatibleWithTraitCollection:nil];
-    UIView* controls = [[UIView alloc] initWithFrame:CGRectMake(0, microphone.size.height, viewRect.size.width, grayBkg.size.height)];
-    [controls setBackgroundColor:[UIColor colorWithPatternImage:grayBkg]];
-    [controls setUserInteractionEnabled:NO];
-    [controls setIsAccessibilityElement:NO];
-    [tmp addSubview:controls];
-
-    // make red recording background view
-    UIImage* recordingBkg = [UIImage imageNamed:[self resolveImageResource:@"CDVCapture.bundle/recording_bg"] inBundle:cdvBundle compatibleWithTraitCollection:nil];
-    UIColor* background = [UIColor colorWithPatternImage:recordingBkg];
-    self.recordingView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, viewRect.size.width, recordingBkg.size.height)];
-    [self.recordingView setBackgroundColor:background];
-    [self.recordingView setHidden:YES];
-    [self.recordingView setUserInteractionEnabled:NO];
-    [self.recordingView setIsAccessibilityElement:NO];
-    [tmp addSubview:self.recordingView];
-
-    // add label
-    self.timerLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, viewRect.size.width, recordingBkg.size.height)];
-    // timerLabel.autoresizingMask = reSizeMask;
-    [self.timerLabel setBackgroundColor:[UIColor clearColor]];
-    [self.timerLabel setTextColor:[UIColor whiteColor]];
-    [self.timerLabel setTextAlignment:NSTextAlignmentCenter];
-    [self.timerLabel setText:@"0:00"];
-    [self.timerLabel setAccessibilityHint:PluginLocalizedString(captureCommand, @"recorded time in minutes and seconds", nil)];
-    self.timerLabel.accessibilityTraits |= UIAccessibilityTraitUpdatesFrequently;
-    self.timerLabel.accessibilityTraits &= ~UIAccessibilityTraitStaticText;
-    [tmp addSubview:self.timerLabel];
-
-    // Add record button
-
-    self.recordImage = [UIImage imageNamed:[self resolveImageResource:@"CDVCapture.bundle/record_button"] inBundle:cdvBundle compatibleWithTraitCollection:nil];
-    self.stopRecordImage = [UIImage imageNamed:[self resolveImageResource:@"CDVCapture.bundle/stop_button"] inBundle:cdvBundle compatibleWithTraitCollection:nil];
-    self.recordButton.accessibilityTraits |= [self accessibilityTraits];
-    self.recordButton = [[UIButton alloc] initWithFrame:CGRectMake((viewRect.size.width - recordImage.size.width) / 2, (microphone.size.height + (grayBkg.size.height - recordImage.size.height) / 2), recordImage.size.width, recordImage.size.height)];
-    [self.recordButton setAccessibilityLabel:PluginLocalizedString(captureCommand, @"toggle audio recording", nil)];
-    [self.recordButton setImage:recordImage forState:UIControlStateNormal];
-    [self.recordButton addTarget:self action:@selector(processButton:) forControlEvents:UIControlEventTouchUpInside];
-    [tmp addSubview:recordButton];
-
-    // make and add done button to navigation bar
-    self.doneButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(dismissAudioView:)];
-    [self.doneButton setStyle:UIBarButtonItemStyleDone];
-    self.navigationItem.rightBarButtonItem = self.doneButton;
-
-    [self setView:tmp];
-}
-
 - (void)viewDidLoad
 {
     [super viewDidLoad];
@@ -779,6 +704,79 @@ _Bool saveToGallery = YES;
         self.recordButton.enabled = YES;
         self.doneButton.enabled = YES;
     }
+}
+
+-(void) setupUI {
+
+    CGRect viewRect = self.view.bounds;
+    CGFloat topInset = self.navigationController.navigationBar.frame.size.height;
+    CGFloat bottomInset = 10;
+
+    // make backgrounds
+    NSString* microphoneResource = @"CDVCapture.bundle/microphone";
+
+    BOOL isIphone5 = ([[UIScreen mainScreen] bounds].size.width == 568 && [[UIScreen mainScreen] bounds].size.height == 320) || ([[UIScreen mainScreen] bounds].size.height == 568 && [[UIScreen mainScreen] bounds].size.width == 320);
+    if (isIphone5) {
+        microphoneResource = @"CDVCapture.bundle/microphone-568h";
+    }
+
+    NSBundle* cdvBundle = [NSBundle bundleForClass:[CDVCapture class]];
+    UIImage* microphone = [UIImage imageNamed:[self resolveImageResource:microphoneResource] inBundle:cdvBundle compatibleWithTraitCollection:nil];
+    UIImageView* microphoneView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, viewRect.size.width, viewRect.size.height)];
+    [microphoneView setImage:microphone];
+    [microphoneView setContentMode:UIViewContentModeScaleAspectFill];
+    [microphoneView setUserInteractionEnabled:NO];
+    [microphoneView setIsAccessibilityElement:NO];
+    [self.view addSubview:microphoneView];
+
+    // add bottom bar view
+    UIImage* grayBkg = [UIImage imageNamed:[self resolveImageResource:@"CDVCapture.bundle/controls_bg"] inBundle:cdvBundle compatibleWithTraitCollection:nil];
+    UIImageView* controls = [[UIImageView alloc] initWithFrame:CGRectMake(0, viewRect.size.height - grayBkg.size.height - bottomInset,
+                                                                          viewRect.size.width, grayBkg.size.height + bottomInset)];
+    [controls setImage:grayBkg];
+    [controls setUserInteractionEnabled:NO];
+    [controls setIsAccessibilityElement:NO];
+    [self.view addSubview:controls];
+
+    // make red recording background view
+    UIImage* recordingBkg = [UIImage imageNamed:[self resolveImageResource:@"CDVCapture.bundle/recording_bg"] inBundle:cdvBundle compatibleWithTraitCollection:nil];
+    UIColor* background = [UIColor colorWithPatternImage:recordingBkg];
+    self.recordingView = [[UIView alloc] initWithFrame:CGRectMake(0, topInset, viewRect.size.width, recordingBkg.size.height)];
+    [self.recordingView setBackgroundColor:background];
+    [self.recordingView setHidden:YES];
+    [self.recordingView setUserInteractionEnabled:NO];
+    [self.recordingView setIsAccessibilityElement:NO];
+    [self.view addSubview:self.recordingView];
+
+    // add label
+    self.timerLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, topInset, viewRect.size.width, recordingBkg.size.height)];
+    [self.timerLabel setBackgroundColor:[UIColor clearColor]];
+    [self.timerLabel setTextColor:[UIColor whiteColor]];
+    [self.timerLabel setTextAlignment:NSTextAlignmentCenter];
+    [self.timerLabel setText:@"0:00"];
+    [self.timerLabel setAccessibilityHint:PluginLocalizedString(captureCommand, @"recorded time in minutes and seconds", nil)];
+    self.timerLabel.accessibilityTraits |= UIAccessibilityTraitUpdatesFrequently;
+    self.timerLabel.accessibilityTraits &= ~UIAccessibilityTraitStaticText;
+    [self.view addSubview:self.timerLabel];
+
+    // Add record button
+
+    self.recordImage = [UIImage imageNamed:[self resolveImageResource:@"CDVCapture.bundle/record_button"] inBundle:cdvBundle compatibleWithTraitCollection:nil];
+    self.stopRecordImage = [UIImage imageNamed:[self resolveImageResource:@"CDVCapture.bundle/stop_button"] inBundle:cdvBundle compatibleWithTraitCollection:nil];
+    self.recordButton.accessibilityTraits |= [self accessibilityTraits];
+    self.recordButton = [[UIButton alloc] initWithFrame:CGRectMake((viewRect.size.width - self.recordImage.size.width) / 2,
+                                                                   microphoneView.frame.size.height - bottomInset - grayBkg.size.height +
+                                                                    ((grayBkg.size.height - self.recordImage.size.height) / 2),
+                                                                   self.recordImage.size.width, self.recordImage.size.height)];
+    [self.recordButton setAccessibilityLabel:PluginLocalizedString(captureCommand, @"toggle audio recording", nil)];
+    [self.recordButton setImage:recordImage forState:UIControlStateNormal];
+    [self.recordButton addTarget:self action:@selector(processButton:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:recordButton];
+
+    // make and add done button to navigation bar
+    self.doneButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(dismissAudioView:)];
+    [self.doneButton setStyle:UIBarButtonItemStyleDone];
+    self.navigationItem.rightBarButtonItem = self.doneButton;
 }
 
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations
@@ -944,6 +942,22 @@ _Bool saveToGallery = YES;
     NSLog(@"error recording audio");
     self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION messageToErrorObject:CAPTURE_INTERNAL_ERR];
     [self dismissAudioView:nil];
+}
+
+- (UIStatusBarStyle)preferredStatusBarStyle
+{
+    return UIStatusBarStyleDefault;
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    if (IsAtLeastiOSVersion(@"7.0")) {
+        [[UIApplication sharedApplication] setStatusBarStyle:[self preferredStatusBarStyle]];
+    }
+
+    [super viewWillAppear:animated];
+
+    [self setupUI];
 }
 
 @end
