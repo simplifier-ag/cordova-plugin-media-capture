@@ -13,7 +13,7 @@ import java.util.List;
 public class VisualizerView extends View {
 	private int LINE_WIDTH = 1; // width of visualizer lines
 	private static final int LINE_SCALE = 60; // scales visualizer lines
-	private List<Float> amplitudes; // amplitudes for line lengths
+	private List<Float> amplitudes = new ArrayList<>(); // amplitudes for line lengths
 	private int width; // width of this View
 	private int height; // height of this View
 	private final Paint linePaint; // specifies line drawing characteristics
@@ -25,23 +25,33 @@ public class VisualizerView extends View {
 		linePaint = new Paint(); // create Paint for lines
 		linePaint.setColor(Color.GREEN); // set color to green
 		linePaint.setStrokeWidth(LINE_WIDTH); // set stroke width
-		linePaint.setStrokeCap(Paint.Cap.ROUND);
+		linePaint.setStrokeCap(Paint.Cap.ROUND); // set the stroke cap
 	}
 
 	// called when the dimensions of the View change
 	@Override
-	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+	protected void onSizeChanged(int w, int h, int oldW, int oldH) {
 		width = w; // new width of this View
 		height = h; // new height of this View
-		amplitudes = new ArrayList<>(width / LINE_WIDTH);
+		int capacity = width / LINE_WIDTH; //new capacity of ArrayList amplitudes
+
+		if (amplitudes.size() > capacity) {
+			amplitudes = amplitudes.subList(amplitudes.size() - capacity, amplitudes.size());
+		}
 	}
 
-	// clear all amplitudes to prepare for a new visualization
+	/**
+	 * Clears all amplitudes to prepare for a new visualization
+	 */
 	public void clear() {
 		amplitudes.clear();
 	}
 
-	// add the given amplitude to the amplitudes ArrayList
+	/**
+	 * Add the given amplitude to the amplitudes ArrayList
+	 *
+	 * @param amplitude Amplitude of MediaRecorder
+	 */
 	public void addAmplitude(float amplitude) {
 		amplitudes.add(drawAmplitude ? amplitude : 0f);
 		drawAmplitude = !drawAmplitude;
@@ -52,15 +62,30 @@ public class VisualizerView extends View {
 		}
 	}
 
+	/**
+	 * Returns the width of the drawn line
+	 *
+	 * @return Width of drawn line
+	 */
 	public int getLineWidth() {
 		return LINE_WIDTH;
 	}
 
+	/**
+	 * Sets the width of the drawn lines
+	 *
+	 * @param LINE_WIDTH Width of the drawn line
+	 */
 	public void setLineWidth(int LINE_WIDTH) {
 		this.LINE_WIDTH = LINE_WIDTH;
 		linePaint.setStrokeWidth(LINE_WIDTH);
 	}
 
+	/**
+	 * Sets the color of the drawn line
+	 *
+	 * @param color The new color (including alpha) to set
+	 */
 	public void setLineColor(int color) {
 		linePaint.setColor(color);
 	}

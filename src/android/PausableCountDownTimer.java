@@ -48,7 +48,7 @@ import android.os.SystemClock;
  * {@link #onTick(long)} takes an amount of time to execute that is significant
  * compared to the countdown interval.
  */
-public abstract class CountDownTimerWithPause {
+public abstract class PausableCountDownTimer {
 
 	/**
 	 * Millis since epoch when alarm should stop.
@@ -75,7 +75,7 @@ public abstract class CountDownTimerWithPause {
 	 * @param countDownInterval The interval along the way to receive
 	 *   {@link #onTick(long)} callbacks.
 	 */
-	public CountDownTimerWithPause(long millisInFuture, long countDownInterval) {
+	public PausableCountDownTimer(long millisInFuture, long countDownInterval) {
 		mMillisInFuture = millisInFuture;
 		mCountdownInterval = countDownInterval;
 	}
@@ -93,7 +93,7 @@ public abstract class CountDownTimerWithPause {
 	/**
 	 * Start the countdown.
 	 */
-	public synchronized final CountDownTimerWithPause start() {
+	public synchronized final PausableCountDownTimer start() {
 		if (mMillisInFuture <= 0) {
 			onFinish();
 			return this;
@@ -143,7 +143,7 @@ public abstract class CountDownTimerWithPause {
 	private final Handler mHandler = new Handler(Looper.getMainLooper()) {
 		@Override
 		public void handleMessage(Message msg) {
-			synchronized (CountDownTimerWithPause.this) {
+			synchronized (PausableCountDownTimer.this) {
 				if (mPaused) {
 					return;
 				}

@@ -119,7 +119,6 @@
                 android:name="org.apache.cordova.mediacapture.AudioCaptureActivity"
                 android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
                 android:enabled="false"
-                android:excludeFromRecents="true"
                 android:exported="false"
                 android:launchMode="singleTop"
                 android:theme="@style/Theme.AppCompat.NoActionBar">
@@ -136,19 +135,19 @@
         <source-file src="src/android/AutoFitTextureView.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/Capture.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/CaptureActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
-        <source-file src="src/android/CountDownTimerWithPause.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileProvider.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/ImageSaver.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/PausableCountDownTimer.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/PendingRequests.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/R.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/VisualizerView.java" target-dir="src/org/apache/cordova/mediacapture" />
 
         <resource-file src="src/android/res/anim/mediacap_blink.xml" target="res/anim/mediacap_blink.xml"/>
+        <resource-file src="src/android/res/anim/mediacap_blink_semitransparent.xml" target="res/anim/mediacap_blink_semitransparent.xml"/>
     
         <resource-file src="src/android/res/drawable/mediacap_capture.xml" target="res/drawable/mediacap_capture.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_check.xml" target="res/drawable/mediacap_check.xml"/>
-        <resource-file src="src/android/res/drawable/mediacap_circle_background.xml" target="res/drawable/mediacap_circle_background.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_flash.xml" target="res/drawable/mediacap_flash.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_flash_off.xml" target="res/drawable/mediacap_flash_off.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_microphone.xml" target="res/drawable/mediacap_microphone.xml"/>
@@ -161,6 +160,7 @@
         <resource-file src="src/android/res/drawable/mediacap_shape_rounded.xml" target="res/drawable/mediacap_shape_rounded.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_stop.xml" target="res/drawable/mediacap_stop.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
+
         <resource-file src="src/android/res/xml/mediacapture_provider_paths.xml" target="res/xml/mediacapture_provider_paths.xml" />
 
         <resource-file src="src/android/res/layout/audio_recorder_layout.xml" target="res/layout/audio_recorder_layout.xml"/>

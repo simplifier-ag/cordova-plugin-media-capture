@@ -5,14 +5,37 @@
 	android:layout_width="match_parent"
 	android:layout_height="match_parent">
 
-	<org.apache.cordova.mediacapture.VisualizerView
-		android:id="@+id/visualizer"
+	<FrameLayout
 		android:layout_width="0dp"
 		android:layout_height="0dp"
+		android:layout_marginBottom="8dp"
+		android:background="#3A3A3A"
 		app:layout_constraintBottom_toTopOf="@+id/recordTimer"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toTopOf="parent" />
+		app:layout_constraintTop_toTopOf="parent">
+
+		<android.support.v7.widget.AppCompatImageView
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:alpha="0.3"
+			android:scaleType="fitCenter"
+			android:src="@drawable/mediacap_microphone" />
+
+		<android.support.v7.widget.LinearLayoutCompat
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:layout_gravity="bottom|center"
+			android:orientation="vertical">
+
+			<org.apache.cordova.mediacapture.VisualizerView
+				android:id="@+id/visualizer"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent" />
+
+		</android.support.v7.widget.LinearLayoutCompat>
+
+	</FrameLayout>
 
 	<android.support.v7.widget.AppCompatTextView
 		android:id="@+id/recordTimer"
@@ -25,29 +48,33 @@
 		app:layout_constraintStart_toStartOf="parent"
 		tools:text="00:00" />
 
-	<android.support.v7.widget.AppCompatImageButton
+	<android.support.design.widget.FloatingActionButton
 		android:id="@+id/toggle_recording_button"
 		android:layout_width="64dp"
 		android:layout_height="64dp"
 		android:layout_marginBottom="24dp"
-		android:background="@drawable/mediacap_circle_background"
+		android:contentDescription="Record"
 		android:elevation="8dp"
 		android:padding="12dp"
 		android:src="@drawable/mediacap_microphone"
+		app:backgroundTint="#cc4285f4"
+		app:fabCustomSize="64dp"
 		app:layout_constraintBottom_toBottomOf="parent"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toStartOf="parent" />
 
-	<android.support.v7.widget.AppCompatImageButton
+	<android.support.design.widget.FloatingActionButton
 		android:id="@+id/toggle_pause_button"
 		android:layout_width="56dp"
 		android:layout_height="56dp"
 		android:layout_marginBottom="24dp"
-		android:background="@drawable/mediacap_circle_background"
+		android:contentDescription="Pause"
 		android:elevation="8dp"
 		android:padding="16dp"
 		android:src="@drawable/mediacap_pause"
 		android:visibility="invisible"
+		app:backgroundTint="#cc4285f4"
+		app:fabCustomSize="56dp"
 		app:layout_constraintBottom_toBottomOf="parent"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintStart_toEndOf="@+id/toggle_recording_button"
