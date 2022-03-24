@@ -960,4 +960,9 @@ _Bool saveToGallery = YES;
     [self setupUI];
 }
 
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [self dismissAudioView:nil];
+}
+
 @end
