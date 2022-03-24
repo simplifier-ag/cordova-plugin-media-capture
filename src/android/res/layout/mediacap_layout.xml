@@ -28,6 +28,22 @@
 			app:realtimeBlurRadius="20dp"
 			app:realtimeOverlayColor="#33555555" />
 
+		<android.support.v7.widget.AppCompatButton
+			style="null"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			android:background="@android:color/transparent"
+			android:clickable="true"
+			android:defaultFocusHighlightEnabled="true"
+			android:enabled="true"
+			android:focusable="true"
+			android:focusableInTouchMode="true"
+			android:focusedByDefault="true"
+			app:layout_constraintBottom_toBottomOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="parent" />
+
 		<ProgressBar
 			style="?android:attr/progressBarStyle"
 			android:layout_width="35dp"

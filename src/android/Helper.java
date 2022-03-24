@@ -25,7 +25,7 @@ public class Helper {
 		if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
 			activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
 		} else {
-			activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+			activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
 		}
 	}
 

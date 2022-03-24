@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
+
+	<FrameLayout
+		android:layout_width="0dp"
+		android:layout_height="0dp"
+		android:layout_marginBottom="8dp"
+		android:background="#3A3A3A"
+		app:layout_constraintBottom_toTopOf="@+id/recordTimer"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toTopOf="parent">
+
+		<android.support.v7.widget.AppCompatImageView
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:alpha="0.3"
+			android:scaleType="fitCenter"
+			android:src="@drawable/mediacap_microphone" />
+
+		<android.support.v7.widget.LinearLayoutCompat
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:layout_gravity="bottom|center"
+			android:orientation="vertical">
+
+			<org.apache.cordova.mediacapture.VisualizerView
+				android:id="@+id/visualizer"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent" />
+
+		</android.support.v7.widget.LinearLayoutCompat>
+
+	</FrameLayout>
+
+	<android.support.v7.widget.AppCompatTextView
+		android:id="@+id/recordTimer"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="20dp"
+		android:textSize="22sp"
+		app:layout_constraintBottom_toTopOf="@+id/toggle_recording_button"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		tools:text="00:00" />
+
+	<android.support.design.widget.FloatingActionButton
+		android:id="@+id/toggle_recording_button"
+		android:layout_width="64dp"
+		android:layout_height="64dp"
+		android:layout_marginBottom="24dp"
+		android:contentDescription="Record"
+		android:elevation="8dp"
+		android:padding="12dp"
+		android:src="@drawable/mediacap_microphone"
+		app:backgroundTint="#cc4285f4"
+		app:fabCustomSize="64dp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toStartOf="parent" />
+
+	<android.support.design.widget.FloatingActionButton
+		android:id="@+id/toggle_pause_button"
+		android:layout_width="56dp"
+		android:layout_height="56dp"
+		android:layout_marginBottom="24dp"
+		android:contentDescription="Pause"
+		android:elevation="8dp"
+		android:padding="16dp"
+		android:src="@drawable/mediacap_pause"
+		android:visibility="invisible"
+		app:backgroundTint="#cc4285f4"
+		app:fabCustomSize="56dp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toEndOf="@+id/toggle_recording_button"
+		tools:visibility="visible" />
+
+</android.support.constraint.ConstraintLayout>

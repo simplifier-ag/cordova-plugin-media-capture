@@ -84,13 +84,18 @@ public class CaptureActivity extends AppCompatActivity {
 	private ConstraintLayout mProgressIndicator;
 	private MenuItem mFlashOnMenu, mFlashOffMenu, mFlashAutoMenu, mFlashTorchMenu;
 
+	/**
+	 * video player controller
+	 */
 	private MediaController mMediaController;
+
 	/**
 	 * indicates if a video is recorded
 	 * false = image
 	 * true = video
 	 */
-	private boolean isVideo = false;
+	private boolean mIsVideo = false;
+
 	/**
 	 * recording limit in seconds, 0 = unlimited
 	 */
@@ -124,18 +129,13 @@ public class CaptureActivity extends AppCompatActivity {
 	/**
 	 * fail counter, used to remove failed resolutions from capture sizes
 	 */
-	private int didFail = -1;
+	private int mDidFail = -1;
+
 	/**
 	 * A {@link Handler} for running tasks in the background.
 	 */
 	private Handler mBackgroundHandler;
-
-	/**
-	 * An additional thread for running tasks that shouldn't block the UI.
-	 */
-	private HandlerThread mBackgroundThread;
-
-	private final CameraListener cameraListener = new CameraListener() {
+	private final CameraListener mCameraListener = new CameraListener() {
 		@Override
 		public void onCameraOpened(@NonNull CameraOptions options) {
 			LOG.v(TAG, "onCameraOpened: %s", options);
@@ -169,7 +169,7 @@ public class CaptureActivity extends AppCompatActivity {
 		@Override
 		public void onCameraError(@NonNull CameraException exception) {
 			LOG.v(TAG, "onCameraError", exception);
-			didFail++;
+			mDidFail++;
 
 			//will cause the resolution selector to be called again
 			mCameraView.close();
@@ -225,13 +225,19 @@ public class CaptureActivity extends AppCompatActivity {
 
 								setLoadingIndicator(false);
 								LOG.e(TAG, "Failed saving image", t);
-								Helper.showErrorDialog(String.format("Failed saving image.\n%s", t.getMessage()), CaptureActivity.this);
+								Helper.showErrorDialog(String.format("%s\n%s",
+										R.localize(CaptureActivity.this, "mediacap_error_save_image"),
+										t.getLocalizedMessage()), CaptureActivity.this);
 							});
 						}
 					};
 
 					if (bitmap == null) {
-						Helper.showErrorDialog("could not create bitmap", CaptureActivity.this);
+						LOG.e(TAG, "bitmap null");
+						Helper.showErrorDialog(
+								R.localize(CaptureActivity.this, "mediacap_error_save_image"),
+								CaptureActivity.this
+						);
 						return;
 					}
 
@@ -318,7 +324,6 @@ public class CaptureActivity extends AppCompatActivity {
 							Toast.LENGTH_LONG
 					).show();
 					stopCaptureVideo(false);
-					updateDurationView(0);
 				}
 			};
 			mDurationTimer.start();
@@ -345,6 +350,10 @@ public class CaptureActivity extends AppCompatActivity {
 			LOG.d(TAG, "onPictureShutter");
 		}
 	};
+	/**
+	 * An additional thread for running tasks that shouldn't block the UI.
+	 */
+	private HandlerThread mBackgroundThread;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -359,7 +368,7 @@ public class CaptureActivity extends AppCompatActivity {
 
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
 				WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
-		setContentView(getResources().getIdentifier("mediacap_layout", "layout", getPackageName()));
+		setContentView(R.getLayout(this, "mediacap_layout"));
 
 		Intent intent = getIntent();
 
@@ -382,10 +391,10 @@ public class CaptureActivity extends AppCompatActivity {
 
 		switch (intent.getAction()) {
 			case MediaStore.ACTION_IMAGE_CAPTURE:
-				isVideo = false;
+				mIsVideo = false;
 				break;
 			case MediaStore.ACTION_VIDEO_CAPTURE:
-				isVideo = true;
+				mIsVideo = true;
 
 				if (intent.hasExtra(MediaStore.EXTRA_DURATION_LIMIT)) {
 					mDuration = intent.getIntExtra(MediaStore.EXTRA_DURATION_LIMIT, mDuration);
@@ -394,12 +403,13 @@ public class CaptureActivity extends AppCompatActivity {
 				mQuality = intent.getIntExtra(MediaStore.EXTRA_VIDEO_QUALITY, mQuality);
 				break;
 			default:
+				//defaults to picture mode
 				break;
 		}
 
 		if (mSaveFileUri == null) {
 			//should not happen twice
-			Helper.showErrorDialog("could not create target file", this);
+			Helper.showErrorDialog(R.localize(this, "mediacap_error_file"), this);
 			return;
 		}
 
@@ -618,13 +628,13 @@ public class CaptureActivity extends AppCompatActivity {
 
 		mCameraView = findViewById(R.getId(this, "cameraview"));
 		mCameraView.setLifecycleOwner(this);
-		mCameraView.addCameraListener(cameraListener);
+		mCameraView.addCameraListener(mCameraListener);
 		//mCameraView.setVideoMaxDuration(mDuration * 1000);
 
 		mCameraView.mapGesture(Gesture.PINCH, GestureAction.ZOOM); // Pinch to zoom!
 		mCameraView.mapGesture(Gesture.TAP, GestureAction.AUTO_FOCUS);
 
-		if (isVideo) {
+		if (mIsVideo) {
 			mCameraView.setMode(Mode.VIDEO);
 			mCameraView.setVideoSize(getSize());
 		} else {
@@ -650,7 +660,7 @@ public class CaptureActivity extends AppCompatActivity {
 			FileDescriptor videoFileDescriptor = getContentResolver().openFileDescriptor(mSaveFileUri, "rw").getFileDescriptor();
 			mCameraView.takeVideo(videoFileDescriptor);
 		} catch (FileNotFoundException e) {
-			Helper.showErrorDialog("could not create target file", this);
+			Helper.showErrorDialog(R.localize(this, "mediacap_error_file"), this);
 		}
 	}
 
@@ -696,17 +706,17 @@ public class CaptureActivity extends AppCompatActivity {
 			source.sort(Comparator.comparingInt(o -> (o.getWidth() * o.getWidth())));
 
 			//remove resolutions that might have failed
-			if (didFail >= 0) {
+			if (mDidFail >= 0) {
 				if (mQuality == 0) {
-					source = source.subList(didFail + 1, source.size());
+					source = source.subList(mDidFail + 1, source.size());
 				} else {
-					source = source.subList(0, source.size() - 1 - didFail);
+					source = source.subList(0, source.size() - 1 - mDidFail);
 				}
 			}
 			if (mQuality == 1)
 				source.sort(Comparator.reverseOrder());
 			if (source.isEmpty()) {
-				Helper.showErrorDialog("could not start capturer", this);
+				Helper.showErrorDialog(R.localize(this, "mediacap_error_starting_camera"), this);
 			}
 
 			return source;

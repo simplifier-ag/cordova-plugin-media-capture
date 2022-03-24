@@ -8,8 +8,8 @@ import org.apache.cordova.LOG;
 
 public class AutoFitTextureView extends TextureView {
 
-	private float aspectRatio = 0f;
 	private static String TAG = AutoFitTextureView.class.getCanonicalName();
+	private float aspectRatio = 0f;
 
 	public AutoFitTextureView(Context context) {
 		this(context, null);
@@ -47,17 +47,17 @@ public class AutoFitTextureView extends TextureView {
 		int width = MeasureSpec.getSize(widthMeasureSpec);
 		int height = MeasureSpec.getSize(heightMeasureSpec);
 		LOG.v(TAG, String.format("onMeasure - width: %s, height: %s", width, height));
-		if(aspectRatio == 0f){
+		if (aspectRatio == 0f) {
 			setMeasuredDimension(width, height);
 		} else {
 			int newWidth;
 			int newHeight;
-			float actualRatio = width > height ? aspectRatio : 1f /aspectRatio;
-			if(width > height * actualRatio){
+			float actualRatio = width > height ? aspectRatio : 1f / aspectRatio;
+			if (width > height * actualRatio) {
 				newHeight = height;
 				newWidth = Math.round(height * actualRatio);
 			} else {
-				newWidth  = width;
+				newWidth = width;
 				newHeight = Math.round(width / actualRatio);
 			}
 

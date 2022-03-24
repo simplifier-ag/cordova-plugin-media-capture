@@ -53,18 +53,16 @@ import java.util.Arrays;
 
 public class Capture extends CordovaPlugin {
 
+	protected static final int CAPTURE_AUDIO = 0;     // Constant for capture audio
+	protected static final int CAPTURE_IMAGE = 1;     // Constant for capture image
+	protected static final int CAPTURE_VIDEO = 2;     // Constant for capture video
+	protected final static String[] permissions = {Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
 	private static final String VIDEO_3GPP = "video/3gpp";
 	private static final String VIDEO_MP4 = "video/mp4";
 	private static final String AUDIO_3GPP = "audio/3gpp";
 	private static final String[] AUDIO_TYPES = new String[]{"audio/3gpp", "audio/aac", "audio/amr", "audio/wav"};
 	private static final String IMAGE_JPEG = "image/jpeg";
-
-	protected static final int CAPTURE_AUDIO = 0;     // Constant for capture audio
-	protected static final int CAPTURE_IMAGE = 1;     // Constant for capture image
-	protected static final int CAPTURE_VIDEO = 2;     // Constant for capture video
-
 	private static final String LOG_TAG = "Capture";
-
 	// Camera or microphone failed to capture image or sound.
 	private final int CAPTURE_INTERNAL_ERR = 0;
 	// Camera application or audio capture application is currently serving other capture request.
@@ -77,17 +75,38 @@ public class Capture extends CordovaPlugin {
 	private final int CAPTURE_PERMISSION_DENIED = 4;
 	// The requested capture operation is not supported.
 	private final int CAPTURE_NOT_SUPPORTED = 20;
-
-	protected final static String[] permissions = {Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
-
-	private boolean cameraPermissionInManifest;     // Whether or not the CAMERA permission is declared in AndroidManifest.xml
-
 	private final PendingRequests pendingRequests = new PendingRequests();
-
+	private boolean cameraPermissionInManifest;     // Whether or not the CAMERA permission is declared in AndroidManifest.xml
 	private int numPics;                            // Number of pictures before capture activity
 
 
 	private Uri requestedContentUri;
+
+	/**
+	 * Enables/Disables activity image . Default is disabled. Prevents other apps to call the
+	 * activity but enabling it before calling startActivity will cause android to make it choosable by user
+	 *
+	 * @param activity activity containing the target package
+	 * @param enabled  sets activity android:enabled for CaptureImageActivity (default false)
+	 */
+	public static void setActivityEnabled(Activity activity, String targetActivity, boolean enabled) {
+		String packageName = activity.getPackageName();
+		PackageManager pm = activity.getApplicationContext().getPackageManager();
+
+		ComponentName cameraActivityAlias = new ComponentName(packageName, targetActivity);
+		if (enabled) {
+			pm.setComponentEnabledSetting(
+					cameraActivityAlias,
+					PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+					PackageManager.DONT_KILL_APP);
+		} else {
+			pm.setComponentEnabledSetting(
+					cameraActivityAlias,
+					PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+					PackageManager.DONT_KILL_APP);
+		}
+		LOG.i(LOG_TAG, String.format("%s %s", enabled ? "enabled" : "disabled", cameraActivityAlias));
+	}
 
 	@Override
 	protected void pluginInitialize() {
@@ -237,30 +256,37 @@ public class Capture extends CordovaPlugin {
 		return obj;
 	}
 
+	//TODO add cdv api option to specify target activity. implicit intents (w/o class name) will
+	// always call system camera starting from android 11
+	// (see https://developer.android.com/about/versions/11/behavior-changes-11#camera)
+
 	/**
 	 * Sets up an intent to capture audio.  Result handled by onActivityResult()
 	 */
 	private void captureAudio(Request req) {
-		if (!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-			PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
+		if (!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+				|| !PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+				|| !PermissionHelper.hasPermission(this, Manifest.permission.RECORD_AUDIO)) {
+			PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO});
 		} else {
 			try {
 				Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
 
 				requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_AUDIO, cordova.getContext());
 				intent.putExtra(MediaStore.EXTRA_OUTPUT, requestedContentUri);
+				intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, req.duration);
 				intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 				LOG.d(LOG_TAG, "Recording audio and saving to: " + requestedContentUri);
+
+				//enable activity's intent filter to appear in camera app chooser dialog
+				setActivityEnabled(this.cordova.getActivity(), AudioCaptureActivity.class.getCanonicalName(), true);
+
 				this.cordova.startActivityForResult(this, intent, req.requestCode);
 			} catch (ActivityNotFoundException | IOException ex) {
 				pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NOT_SUPPORTED, "No Activity found to handle Audio Capture."));
 			}
 		}
 	}
-
-	//TODO add cdv api option to specify target activity. implicit intents (w/o class name) will
-	// always call system camera starting from android 11
-	// (see https://developer.android.com/about/versions/11/behavior-changes-11#camera)
 
 	/**
 	 * Sets up an intent to capture images.  Result handled by onActivityResult()
@@ -383,6 +409,8 @@ public class Capture extends CordovaPlugin {
 		if (CAPTURE_IMAGE == req.action || CAPTURE_VIDEO == req.action) {
 			//disable ImageActivity alias to prevent other apps using this one
 			setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), false);
+		} else if (CAPTURE_AUDIO == req.action) {
+			setActivityEnabled(this.cordova.getActivity(), AudioCaptureActivity.class.getCanonicalName(), false);
 		}
 
 		// Result received okay
@@ -436,7 +464,6 @@ public class Capture extends CordovaPlugin {
 		}
 	}
 
-
 	public void onAudioActivityResult(Request req, Uri result) {
 		// create a file object from the audio absolute path
 		req.results.put(createMediaFile(result));
@@ -472,7 +499,7 @@ public class Capture extends CordovaPlugin {
 			// Send Uri back to JavaScript for viewing video
 			pendingRequests.resolveWithSuccess(req);
 		} else {
-            captureVideo(req);
+			captureVideo(req);
 		}
 	}
 
@@ -654,31 +681,5 @@ public class Capture extends CordovaPlugin {
 
 	public void onRestoreStateForActivityResult(Bundle state, CallbackContext callbackContext) {
 		pendingRequests.setLastSavedState(state, callbackContext);
-	}
-
-	/**
-	 * Enables/Disables activity image . Default is disabled. Prevents other apps to call the
-	 * activity but enabling it before calling startActivity will cause android to make it choosable by user
-	 *
-	 * @param activity activity containing the target package
-	 * @param enabled  sets activity android:enabled for CaptureImageActivity (default false)
-	 */
-	public static void setActivityEnabled(Activity activity, String targetActivity, boolean enabled) {
-		String packageName = activity.getPackageName();
-		PackageManager pm = activity.getApplicationContext().getPackageManager();
-
-		ComponentName cameraActivityAlias = new ComponentName(packageName, targetActivity);
-		if (enabled) {
-			pm.setComponentEnabledSetting(
-					cameraActivityAlias,
-					PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-					PackageManager.DONT_KILL_APP);
-		} else {
-			pm.setComponentEnabledSetting(
-					cameraActivityAlias,
-					PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-					PackageManager.DONT_KILL_APP);
-		}
-		LOG.i(LOG_TAG, String.format("%s %s", enabled ? "enabled" : "disabled", cameraActivityAlias));
 	}
 }

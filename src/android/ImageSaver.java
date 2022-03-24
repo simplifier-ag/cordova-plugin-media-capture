@@ -26,188 +26,187 @@ import java.util.TimeZone;
 
 @SuppressLint("LogNotTimber")
 public class ImageSaver implements Runnable {
-    private final String TAG = ImageSaver.class.getSimpleName();
+	private final String TAG = ImageSaver.class.getSimpleName();
 
-    /**
-     * The image from camera callback
-     */
-    @Nullable
-    private final Image mImage;
+	/**
+	 * The image from camera callback
+	 */
+	@Nullable
+	private final Image mImage;
+	/**
+	 * target content:// uri for image
+	 */
+	private final Uri mUri;
+	/**
+	 * activity context
+	 */
+	private final Context mContext;
+	private final ImageSaver.Callback mCallback;
+	/**
+	 * An already existing bitmap
+	 */
+	@Nullable
+	private Bitmap mBitmap;
+	/**
+	 *
+	 */
+	private float mRotation = 0f;
 
-    /**
-     * An already existing bitmap
-     */
-    @Nullable
-    private Bitmap mBitmap;
+	/**
+	 * saves jpeg from given image to taget uri
+	 *
+	 * @param context  activity context
+	 * @param image    image with at least one plane
+	 * @param uri      target uri to save the image to
+	 * @param callback calls .success with processed bitmap if images was saved successfully,
+	 *                 .error if something failed
+	 */
+	ImageSaver(Context context, @NonNull Image image, Uri uri, ImageSaver.Callback callback) {
+		this.mContext = context;
+		this.mImage = image;
+		this.mBitmap = null;
+		this.mUri = uri;
+		this.mCallback = callback;
+	}
 
+	/**
+	 * rotates a given bitmap and saves it to a give url
+	 *
+	 * @param context  activity context
+	 * @param bitmap   source bitmap
+	 * @param uri      target content-uri
+	 * @param rotation target rotation in degrees
+	 * @param callback calls .success with processed bitmap if images was saved successfully,
+	 *                 *                 .error if something failed
+	 */
+	ImageSaver(Context context, @NonNull Bitmap bitmap, Uri uri, float rotation, ImageSaver.Callback callback) {
+		this.mContext = context;
+		this.mImage = null;
+		this.mBitmap = bitmap;
+		this.mUri = uri;
+		this.mCallback = callback;
+		this.mRotation = rotation;
+	}
 
-    /**
-     * target content:// uri for image
-     */
-    private final Uri mUri;
+	/**
+	 * rotates a given bitmap and saves it to a give url
+	 *
+	 * @param context  activity context
+	 * @param bitmap   source bitmap
+	 * @param uri      target content-uri
+	 * @param callback calls .success with processed bitmap if images was saved successfully,
+	 *                 *                 .error if something failed
+	 */
+	ImageSaver(Context context, @NonNull Bitmap bitmap, Uri uri, ImageSaver.Callback callback) {
+		this.mContext = context;
+		this.mImage = null;
+		this.mBitmap = bitmap;
+		this.mUri = uri;
+		this.mCallback = callback;
+	}
 
-    /**
-     * activity context
-     */
-    private final Context mContext;
+	@Override
+	public void run() {
+		try {
+			mCallback.onSuccess(getBitmap());
+		} catch (Exception e) {
+			LOG.e(TAG, "error saving image", e);
+			mCallback.onFailure(e);
+		}
+	}
 
-    /**
-     *
-     */
-    private float mRotation = 0f;
+	@NonNull
+	private Bitmap getBitmap() throws Exception {
+		byte[] data = null;
 
-    private final ImageSaver.Callback mCallback;
+		//resolve bitmap from image
+		if (mImage != null) {
+			try {
+				Image.Plane[] planes = mImage.getPlanes();
+				ByteBuffer buffer = planes[0].getBuffer();
+				buffer.rewind();
+				data = new byte[buffer.capacity()];
+				buffer.get(data);
+				mBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+			} catch (NullPointerException e) {
+				throw new Exception("nullPointer exception writing file");
+			} finally {
+				mImage.close();
+			}
+		}
 
-    /**
-     * saves jpeg from given image to taget uri
-     * @param context activity context
-     * @param image image with at least one plane
-     * @param uri target uri to save the image to
-     * @param callback calls .success with processed bitmap if images was saved successfully,
-     *                 .error if something failed
-     */
-    ImageSaver(Context context, @NonNull Image image, Uri uri, ImageSaver.Callback callback) {
-        this.mContext = context;
-        this.mImage = image;
-        this.mBitmap = null;
-        this.mUri = uri;
-        this.mCallback = callback;
-    }
+		//resolve from uri
+		if (mBitmap == null) {
+			try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
+				mBitmap = BitmapFactory.decodeFileDescriptor(parcelFileDescriptor.getFileDescriptor());
+			} catch (IOException e) {
+				throw new Exception("Error generating image");
+			}
+		}
 
-    /**
-     * rotates a given bitmap and saves it to a give url
-     * @param context activity context
-     * @param bitmap source bitmap
-     * @param uri target content-uri
-     * @param rotation target rotation in degrees
-     * @param callback calls .success with processed bitmap if images was saved successfully,
-     *      *                 .error if something failed
-     */
-    ImageSaver(Context context, @NonNull Bitmap bitmap, Uri uri, float rotation, ImageSaver.Callback callback) {
-        this.mContext = context;
-        this.mImage = null;
-        this.mBitmap = bitmap;
-        this.mUri = uri;
-        this.mCallback = callback;
-        this.mRotation = rotation;
-    }
+		//rotates by given rotation
+		if (mRotation != 0f) {
+			mBitmap = rotateBitMap(mBitmap, mRotation);
+		}
 
-    /**
-     * rotates a given bitmap and saves it to a give url
-     * @param context activity context
-     * @param bitmap source bitmap
-     * @param uri target content-uri
-     * @param callback calls .success with processed bitmap if images was saved successfully,
-     *      *                 .error if something failed
-     */
-    ImageSaver(Context context, @NonNull Bitmap bitmap, Uri uri, ImageSaver.Callback callback) {
-        this.mContext = context;
-        this.mImage = null;
-        this.mBitmap = bitmap;
-        this.mUri = uri;
-        this.mCallback = callback;
-    }
+		ContentResolver cr = mContext.getContentResolver();
+		//save compressed file
+		try (OutputStream output = mContext.getContentResolver().openOutputStream(mUri)) {
+			if (!mBitmap.compress(Bitmap.CompressFormat.JPEG, 90, output))
+				throw new IOException("could not compress image");
+			else {
+				//store meta data
+				try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
+					ExifInterface exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault());
+					sdf.setTimeZone(TimeZone.getTimeZone("Etc/UTC"));
+					String date = sdf.format(new Date());
+					exif.setAttribute(ExifInterface.TAG_DATETIME, date);
+					exif.saveAttributes();
+				} catch (IOException e) {
+					LOG.e(TAG, "Failed receiving ExIf metadata", e);
+				}
+			}
+		} catch (Exception e) {
+			throw new IOException("could not create image");
+		}
 
-    @Override
-    public void run() {
-        try {
-            mCallback.onSuccess(getBitmap());
-        } catch (Exception e) {
-            LOG.e(TAG, "error saving image", e);
-            mCallback.onFailure(e);
-        }
-    }
+		return mBitmap;
+	}
 
-    @NonNull
-    private Bitmap getBitmap() throws Exception {
-        byte[] data = null;
+	/**
+	 * rotates image a given degree
+	 *
+	 * @param bitmap  source bitmap
+	 * @param degrees positive integer in degrees rotates right, negative left
+	 */
+	@NonNull
+	Bitmap rotateBitMap(Bitmap bitmap, float degrees) {
+		Matrix matrix = new Matrix();
+		matrix.preRotate(degrees);
+		return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+	}
 
-        //resolve bitmap from image
-        if (mImage != null) {
-            try {
-                Image.Plane[] planes = mImage.getPlanes();
-                ByteBuffer buffer = planes[0].getBuffer();
-                buffer.rewind();
-                data = new byte[buffer.capacity()];
-                buffer.get(data);
-                mBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-            } catch (NullPointerException e) {
-                throw new Exception("nullPointer exception writing file");
-            } finally {
-                mImage.close();
-            }
-        }
+	/**
+	 * maps exif orientation to int
+	 *
+	 * @param exifOrientation given exif orientation
+	 * @return orientation in degrees
+	 */
+	private int exifToDegrees(int exifOrientation) {
+		if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) {
+			return 90;
+		} else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_180) {
+			return 180;
+		} else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_270) {
+			return 270;
+		}
+		return 0;
+	}
 
-        //resolve from uri
-        if (mBitmap == null) {
-            try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
-                mBitmap = BitmapFactory.decodeFileDescriptor(parcelFileDescriptor.getFileDescriptor());
-            } catch (IOException e) {
-                throw new Exception("Error generating image");
-            }
-        }
+	public interface Callback {
+		void onSuccess(@NonNull final Bitmap bitmap);
 
-        //rotates by given rotation
-        if (mRotation != 0f) {
-            mBitmap = rotateBitMap(mBitmap, mRotation);
-        }
-
-        ContentResolver cr = mContext.getContentResolver();
-        //save compressed file
-        try (OutputStream output = mContext.getContentResolver().openOutputStream(mUri)) {
-            if (!mBitmap.compress(Bitmap.CompressFormat.JPEG, 90, output))
-                throw new IOException("could not compress image");
-            else {
-                //store meta data
-                try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
-                    ExifInterface exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault());
-                    sdf.setTimeZone(TimeZone.getTimeZone("Etc/UTC"));
-                    String date = sdf.format(new Date());
-                    exif.setAttribute(ExifInterface.TAG_DATETIME, date);
-                    exif.saveAttributes();
-                } catch (IOException e) {
-                    LOG.e(TAG, "Failed receiving ExIf metadata", e);
-                }
-            }
-        } catch (Exception e) {
-            throw new IOException("could not create image");
-        }
-
-        return mBitmap;
-    }
-
-    /**
-     * rotates image a given degree
-     * @param bitmap  source bitmap
-     * @param degrees positive integer in degrees rotates right, negative left
-     */
-    @NonNull
-    Bitmap rotateBitMap(Bitmap bitmap, float degrees) {
-        Matrix matrix = new Matrix();
-        matrix.preRotate(degrees);
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-    }
-
-    /**
-     * maps exif orientation to int
-     * @param exifOrientation given exif orientation
-     * @return orientation in degrees
-     */
-    private int exifToDegrees(int exifOrientation) {
-        if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) {
-            return 90;
-        } else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_180) {
-            return 180;
-        } else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_270) {
-            return 270;
-        }
-        return 0;
-    }
-
-    public interface Callback {
-        void onSuccess(@NonNull final Bitmap bitmap);
-
-        void onFailure(Throwable t);
-    }
+		void onFailure(Throwable t);
+	}
 }

@@ -44,6 +44,10 @@ see the Privacy Guide.
 
 This plugin defines global `navigator.device.capture` object.
 
+Comes with an internal capture-activity powered by
+[![CameraView](https://natario1.github.io/CameraView/home)].
+See "useInternalCameraApp" capture option for further information.
+
 Although in the global scope, it is not available until after the `deviceready` event.
 
     document.addEventListener("deviceready", onDeviceReady, false);
@@ -325,11 +329,6 @@ capturing a video clip, the `CaptureErrorCB` callback executes with a
     var options = { limit: 3, duration: 10 };
 
     navigator.device.capture.captureAudio(captureSuccess, captureError, options);
-
-### Android Quirks
-
-- The `duration` parameter is not supported.  Recording lengths can't be limited programmatically.
-
 
 ### iOS Quirks
 
