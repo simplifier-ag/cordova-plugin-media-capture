@@ -20,6 +20,7 @@ public class R {
 		static String MIPMAP = "mipmap";
 		static String COLOR = "color";
 		static String ATTR = "attr";
+		static String MENU = "menu";
 	}
 
 	/**
@@ -122,6 +123,10 @@ public class R {
 		TypedValue typedValue = new TypedValue();
 		context.getTheme().resolveAttribute(getAttributeId(context, identifier), typedValue, true);
 		return typedValue.data;
+	}
+
+	public static int getMenu(Context context, String identifier) {
+		return getResourceId(context, identifier, ResourceTypes.MENU);
 	}
 }
 

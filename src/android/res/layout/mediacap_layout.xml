@@ -5,7 +5,7 @@
 	android:layout_width="match_parent"
 	android:layout_height="match_parent">
 
-	<android.support.constraint.ConstraintLayout
+	<androidx.constraintlayout.widget.ConstraintLayout
 		android:id="@+id/progressIndicator"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
@@ -28,22 +28,6 @@
 			app:realtimeBlurRadius="20dp"
 			app:realtimeOverlayColor="#33555555" />
 
-		<android.support.v7.widget.AppCompatButton
-			style="null"
-			android:layout_width="0dp"
-			android:layout_height="0dp"
-			android:background="@android:color/transparent"
-			android:clickable="true"
-			android:defaultFocusHighlightEnabled="true"
-			android:enabled="true"
-			android:focusable="true"
-			android:focusableInTouchMode="true"
-			android:focusedByDefault="true"
-			app:layout_constraintBottom_toBottomOf="parent"
-			app:layout_constraintEnd_toEndOf="parent"
-			app:layout_constraintStart_toStartOf="parent"
-			app:layout_constraintTop_toTopOf="parent" />
-
 		<ProgressBar
 			style="?android:attr/progressBarStyle"
 			android:layout_width="35dp"
@@ -54,32 +38,39 @@
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintTop_toTopOf="parent" />
-	</android.support.constraint.ConstraintLayout>
+	</androidx.constraintlayout.widget.ConstraintLayout>
 
 	<FrameLayout
 		android:id="@+id/cameraPreview"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent">
 
-		<org.apache.cordova.mediacapture.AutoFitTextureView
-			android:id="@+id/cameraPreviewTexture"
+		<com.otaliastudios.cameraview.CameraView
+			android:id="@+id/cameraview"
+			android:keepScreenOn="true"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:layout_gravity="center" />
+			app:cameraPlaySounds="true"
+			app:cameraGrid="drawPhi"
+			app:cameraUseDeviceOrientation="false"
+			app:cameraVideoCodec="h264"
+			android:layout_gravity="center"
+			app:cameraAutoFocusMarker="@string/cameraview_default_autofocus_marker"
+			/>
 
-		<android.support.constraint.ConstraintLayout
+		<androidx.constraintlayout.widget.ConstraintLayout
 			android:id="@+id/cameraControlBar"
 			android:layout_width="match_parent"
 			android:layout_height="112dp"
 			android:layout_gravity="bottom"
 			android:background="#cc4285f4">
 
-			<android.support.v7.widget.AppCompatImageButton
+			<androidx.appcompat.widget.AppCompatImageButton
 				android:id="@+id/changeFlashMode"
 				android:layout_width="70dp"
 				android:layout_height="0dp"
-				android:layout_marginTop="16dp"
 				android:layout_marginEnd="24dp"
+				android:layout_marginTop="16dp"
 				android:layout_marginBottom="16dp"
 				android:background="?android:selectableItemBackground"
 				android:scaleType="fitCenter"
@@ -89,7 +80,7 @@
 				app:layout_constraintVertical_bias="0.0"
 				app:srcCompat="@drawable/mediacap_flash_off" />
 
-			<android.support.v7.widget.AppCompatImageButton
+			<androidx.appcompat.widget.AppCompatImageButton
 				android:id="@+id/takePicture"
 				android:layout_width="100dp"
 				android:layout_height="0dp"
@@ -104,7 +95,7 @@
 				app:layout_constraintTop_toTopOf="parent"
 				app:srcCompat="@drawable/mediacap_capture" />
 
-			<android.support.v7.widget.AppCompatImageButton
+			<androidx.appcompat.widget.AppCompatImageButton
 				android:id="@+id/switchCamera"
 				android:layout_width="70dp"
 				android:layout_height="0dp"
@@ -118,10 +109,10 @@
 				app:layout_constraintTop_toTopOf="@+id/takePicture"
 				app:layout_constraintVertical_bias="0.0"
 				app:srcCompat="@drawable/mediacap_switch" />
-		</android.support.constraint.ConstraintLayout>
+		</androidx.constraintlayout.widget.ConstraintLayout>
 	</FrameLayout>
 
-	<android.support.constraint.ConstraintLayout
+	<androidx.constraintlayout.widget.ConstraintLayout
 		android:id="@+id/picturePreview"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
@@ -129,12 +120,12 @@
 		android:visibility="gone"
 		tools:visibility="gone">
 
-		<android.support.v7.widget.AppCompatImageView
+		<androidx.appcompat.widget.AppCompatImageView
 			android:id="@+id/capturedImageView"
 			android:layout_width="match_parent"
 			android:layout_height="match_parent" />
 
-		<android.support.v7.widget.AppCompatImageButton
+		<androidx.appcompat.widget.AppCompatImageButton
 			android:id="@+id/pictureAccept"
 			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
 			android:layout_width="100dp"
@@ -147,7 +138,7 @@
 			app:layout_constraintStart_toStartOf="parent"
 			app:srcCompat="@drawable/mediacap_check" />
 
-		<android.support.v7.widget.AppCompatImageButton
+		<androidx.appcompat.widget.AppCompatImageButton
 			android:id="@+id/pictureRepeat"
 			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
 			android:layout_width="0dp"
@@ -164,7 +155,7 @@
 			app:layout_constraintTop_toTopOf="@+id/pictureAccept"
 			app:srcCompat="@drawable/mediacap_repeat" />
 
-		<android.support.v7.widget.AppCompatImageButton
+		<androidx.appcompat.widget.AppCompatImageButton
 			android:id="@+id/rotate_left"
 			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
 			android:layout_width="0dp"
@@ -181,7 +172,7 @@
 			app:layout_constraintTop_toTopOf="@+id/pictureAccept"
 			app:srcCompat="@drawable/mediacap_rotate_left" />
 
-		<android.support.v7.widget.AppCompatImageButton
+		<androidx.appcompat.widget.AppCompatImageButton
 			android:id="@+id/rotate_right"
 			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
 			android:layout_width="0dp"
@@ -197,15 +188,15 @@
 			app:layout_constraintStart_toEndOf="@id/rotate_left"
 			app:layout_constraintTop_toTopOf="@+id/pictureAccept"
 			app:srcCompat="@drawable/mediacap_rotate_right" />
-	</android.support.constraint.ConstraintLayout>
+	</androidx.constraintlayout.widget.ConstraintLayout>
 
-	<android.support.constraint.ConstraintLayout
+	<androidx.constraintlayout.widget.ConstraintLayout
 		android:id="@+id/videoPreview"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
 		android:background="#444444"
 		android:visibility="gone"
-		tools:visibility="visible">
+		tools:visibility="gone">
 
 		<VideoView
 			android:id="@+id/capturedVideoView"
@@ -218,7 +209,7 @@
 			app:layout_constraintTop_toTopOf="parent"/>
 
 
-		<android.support.v7.widget.AppCompatImageButton
+		<androidx.appcompat.widget.AppCompatImageButton
 			android:id="@+id/videoAccept"
 			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
 			android:layout_width="100dp"
@@ -231,7 +222,7 @@
 			app:layout_constraintStart_toStartOf="parent"
 			app:srcCompat="@drawable/mediacap_check" />
 
-		<android.support.v7.widget.AppCompatImageButton
+		<androidx.appcompat.widget.AppCompatImageButton
 			android:id="@+id/videoRepeat"
 			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
 			android:layout_width="0dp"
@@ -248,7 +239,7 @@
 			app:layout_constraintTop_toTopOf="@+id/videoAccept"
 			app:srcCompat="@drawable/mediacap_repeat" />
 
-		<android.support.v7.widget.AppCompatImageButton
+		<androidx.appcompat.widget.AppCompatImageButton
 			android:id="@+id/videoPlay"
 			style="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
 			android:layout_width="0dp"
@@ -265,10 +256,10 @@
 			app:layout_constraintStart_toEndOf="@id/videoAccept"
 			app:layout_constraintTop_toTopOf="@+id/videoAccept"
 			app:srcCompat="@drawable/mediacap_play" />
-	</android.support.constraint.ConstraintLayout>
+	</androidx.constraintlayout.widget.ConstraintLayout>
 
 
-	<android.support.v7.widget.LinearLayoutCompat
+	<androidx.appcompat.widget.LinearLayoutCompat
 		android:id="@+id/record_stats"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
@@ -283,20 +274,20 @@
         android:layout_margin="8dp"
 		>
 
-		<android.support.v7.widget.AppCompatImageView
+		<androidx.appcompat.widget.AppCompatImageView
 			android:id="@+id/record_icon"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:src="@drawable/mediacap_record" />
 
-		<android.support.v7.widget.AppCompatTextView
+		<androidx.appcompat.widget.AppCompatTextView
 			android:id="@+id/record_duration"
 			android:layout_width="wrap_content"
 			android:layout_height="match_parent"
 			android:gravity="center"
             android:textStyle="bold"
             android:textColor="@android:color/white"
-			tools:text="42/69" />
-	</android.support.v7.widget.LinearLayoutCompat>
+			tools:text="00:42/69:00" />
+	</androidx.appcompat.widget.LinearLayoutCompat>
 
 </FrameLayout>

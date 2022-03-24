@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="mediacap_flash_options">Optionen</string>
+	<string name="mediacap_flash_auto">Auto</string>
+	<string name="mediacap_flash_on">An</string>
+	<string name="mediacap_flash_off">Aus</string>
+	<string name="mediacap_flash_torch">Lampe</string>
+	<string name="mediacap_capture_limit_reached">Aufnahmelimit erreicht</string>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto">
+
+	<item
+		android:id="@+id/mediacap_flash_auto"
+		app:showAsAction="withText"
+		android:orderInCategory="101"
+		android:icon="@drawable/mediacap_flash_auto"
+		android:title="@string/mediacap_flash_auto"/>
+	<item
+		android:id="@+id/mediacap_flash_on"
+		app:showAsAction="ifRoom"
+		android:orderInCategory="102"
+		android:icon="@drawable/mediacap_flash_on"
+		android:title="@string/mediacap_flash_on"/>
+	<item
+		android:id="@+id/mediacap_flash_off"
+		app:showAsAction="ifRoom"
+		android:orderInCategory="103"
+		android:icon="@drawable/mediacap_flash_off"
+		android:title="@string/mediacap_flash_off"/>
+	<item
+		android:id="@+id/mediacap_flash_torch"
+		app:showAsAction="ifRoom"
+		android:orderInCategory="104"
+		android:icon="@drawable/mediacap_flash_torch"
+		android:title="@string/mediacap_flash_torch"/>
+
+
+</menu>

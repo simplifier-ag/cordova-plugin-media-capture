@@ -25,13 +25,15 @@ import static org.apache.cordova.mediacapture.Capture.CAPTURE_VIDEO;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Environment;
-import android.support.annotation.Nullable;
 import android.webkit.MimeTypeMap;
+
+import androidx.annotation.Nullable;
 
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.LOG;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -79,7 +81,7 @@ public class FileHelper {
      * @return content://-uri for a given media file type
      */
     @Nullable
-    public static Uri getDataUriForMediaFile(int type, Context context) throws IllegalArgumentException {
+    public static Uri getDataUriForMediaFile(int type, Context context) throws IllegalArgumentException, IOException {
 
         String applicationId = context.getPackageName();
         File mediaStorageDir;
@@ -118,6 +120,7 @@ public class FileHelper {
                 uri = FileProvider.getUriForFile(context,
                         applicationId + ".cordova.plugin.mediacapture.provider",
                         video);
+
             }
             break;
             default:

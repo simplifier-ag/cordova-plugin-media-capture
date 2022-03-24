@@ -10,14 +10,13 @@ import android.media.ExifInterface;
 import android.media.Image;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.apache.cordova.LOG;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
@@ -93,6 +92,22 @@ public class ImageSaver implements Runnable {
         this.mRotation = rotation;
     }
 
+    /**
+     * rotates a given bitmap and saves it to a give url
+     * @param context activity context
+     * @param bitmap source bitmap
+     * @param uri target content-uri
+     * @param callback calls .success with processed bitmap if images was saved successfully,
+     *      *                 .error if something failed
+     */
+    ImageSaver(Context context, @NonNull Bitmap bitmap, Uri uri, ImageSaver.Callback callback) {
+        this.mContext = context;
+        this.mImage = null;
+        this.mBitmap = bitmap;
+        this.mUri = uri;
+        this.mCallback = callback;
+    }
+
     @Override
     public void run() {
         try {
@@ -132,33 +147,6 @@ public class ImageSaver implements Runnable {
             }
         }
 
-        //get exif from image data
-        ExifInterface exif = null;
-        if (data != null) { //data was provided by bitmap or image
-            try (InputStream inputStream = new ByteArrayInputStream(data)) {
-                exif = new ExifInterface(inputStream);
-            } catch (IOException e) {
-                LOG.d(TAG, "Failed receiving ExIf metadata");
-            }
-        } else { //try reading exif from uri
-            try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
-                exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
-            } catch (IOException e) {
-                LOG.d(TAG, "Failed receiving ExIf metadata");
-            }
-        }
-
-        if (exif != null) {
-            int exifRotation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-            int exifRotationDegrees = exifToDegrees(exifRotation);
-
-            //rotates according to exif meta data from given image
-            if (exifRotationDegrees != 0) {
-                mBitmap = rotateBitMap(mBitmap, exifRotationDegrees);
-            }
-        }
-
-
         //rotates by given rotation
         if (mRotation != 0f) {
             mBitmap = rotateBitMap(mBitmap, mRotation);
@@ -172,7 +160,7 @@ public class ImageSaver implements Runnable {
             else {
                 //store meta data
                 try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
-                    exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
+                    ExifInterface exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault());
                     sdf.setTimeZone(TimeZone.getTimeZone("Etc/UTC"));
                     String date = sdf.format(new Date());

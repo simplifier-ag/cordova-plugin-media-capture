@@ -121,6 +121,7 @@
         <source-file src="src/android/CaptureActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileProvider.java" target-dir="src/org/apache/cordova/mediacapture" />
+        <source-file src="src/android/Helper.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/ImageSaver.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/PendingRequests.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/R.java" target-dir="src/org/apache/cordova/mediacapture" />
@@ -129,8 +130,11 @@
     
         <resource-file src="src/android/res/drawable/mediacap_capture.xml" target="res/drawable/mediacap_capture.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_check.xml" target="res/drawable/mediacap_check.xml"/>
-        <resource-file src="src/android/res/drawable/mediacap_flash.xml" target="res/drawable/mediacap_flash.xml"/>
+
+        <resource-file src="src/android/res/drawable/mediacap_flash_auto.xml" target="res/drawable/mediacap_flash_auto.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_flash_off.xml" target="res/drawable/mediacap_flash_off.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_flash_on.xml" target="res/drawable/mediacap_flash_on.xml"/>
+        <resource-file src="src/android/res/drawable/mediacap_flash_torch.xml" target="res/drawable/mediacap_flash_torch.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_pause.xml" target="res/drawable/mediacap_pause.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_play.xml" target="res/drawable/mediacap_play.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_repeat.xml" target="res/drawable/mediacap_repeat.xml"/>
@@ -140,8 +144,15 @@
         <resource-file src="src/android/res/drawable/mediacap_shape_rounded.xml" target="res/drawable/mediacap_shape_rounded.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_stop.xml" target="res/drawable/mediacap_stop.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
+
+        <resource-file src="src/android/res/menu/mediacap_flashmodes.xml" target="res/drawable/menu/mediacap_flashmodes.xml"/>
+
         <resource-file src="src/android/res/xml/mediacapture_provider_paths.xml" target="res/xml/mediacapture_provider_paths.xml" />
-        <resource-file src="src/android/res/layout/camera_layout.xml" target="res/layout/camera_layout.xml"/>
+
+        <resource-file src="src/android/res/layout/mediacap_layout.xml" target="res/layout/mediacap_layout.xml"/>
+        
+        <resource-file src="src/android/res/values/mediacap_strings.xml" target="res/values/mediacap_strings.xml"/>
+        <resource-file src="src/android/res/values_de/mediacap_strings.xml" target="res/values_de/mediacap_strings.xml"/>
 
         <js-module src="www/android/init.js" name="init">
             <runs />

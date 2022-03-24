@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string translatable="false" name="mediacap_three_dots">⋮</string>
+	<string name="mediacap_flash_options">Options</string>
+	<string name="mediacap_flash_auto">Auto</string>
+	<string name="mediacap_flash_on">On</string>
+	<string name="mediacap_flash_off">Off</string>
+	<string name="mediacap_flash_torch">Torch</string>
+	<string name="mediacap_capture_limit_reached">Capture limit reached</string>
+</resources>
