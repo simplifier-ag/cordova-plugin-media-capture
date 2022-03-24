@@ -84,7 +84,6 @@ public class Capture extends CordovaPlugin {
 
     private int numPics;                            // Number of pictures before capture activity
 
-
     private Uri requestedContentUri;
 
     @Override
@@ -239,20 +238,23 @@ public class Capture extends CordovaPlugin {
      * Sets up an intent to capture audio.  Result handled by onActivityResult()
      */
     private void captureAudio(Request req) {
-        if (!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-            PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
+        if (!PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                || !PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                || !PermissionHelper.hasPermission(this, Manifest.permission.RECORD_AUDIO)) {
+            PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO});
         } else {
-            try {
-                Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
+            Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
 
-                requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_AUDIO, cordova.getContext());
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, requestedContentUri);
-                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                LOG.d(LOG_TAG, "Recording audio and saving to: " + requestedContentUri);
-                this.cordova.startActivityForResult(this, intent, req.requestCode);
-            } catch (ActivityNotFoundException ex) {
-                pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NOT_SUPPORTED, "No Activity found to handle Audio Capture."));
-            }
+            requestedContentUri = FileHelper.getDataUriForMediaFile(CAPTURE_AUDIO, cordova.getContext());
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, requestedContentUri);
+            intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, req.duration);
+            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            LOG.d(LOG_TAG, "Recording audio and saving to: " + requestedContentUri);
+
+            //enable activity's intent filter to appear in camera app chooser dialog
+            setActivityEnabled(this.cordova.getActivity(), AudioCaptureActivity.class.getCanonicalName(), true);
+
+            this.cordova.startActivityForResult(this, intent, req.requestCode);
         }
     }
 
@@ -374,6 +376,8 @@ public class Capture extends CordovaPlugin {
         if (CAPTURE_IMAGE == req.action || CAPTURE_VIDEO == req.action) {
             //disable ImageActivity alias to prevent other apps using this one
             setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), false);
+        } else if (CAPTURE_AUDIO == req.action) {
+            setActivityEnabled(this.cordova.getActivity(), AudioCaptureActivity.class.getCanonicalName(), false);
         }
 
         // Result received okay

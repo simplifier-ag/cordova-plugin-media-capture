@@ -273,11 +273,6 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
     private MediaRecorder mMediaRecorder;
 
     /**
-     * target FileDescriptor for video stream
-     */
-    FileDescriptor mVideoFileDescriptor;
-
-    /**
      * recording is currently running
      */
     private boolean mIsRecordingVideo = false;
@@ -717,6 +712,7 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
 
         if (intent == null) {
             LOG.e(TAG, "no intent data");
+            finish();
             return;
         } else if (intent.getExtras() != null
                 && intent.getExtras().get(MediaStore.EXTRA_OUTPUT) != null) {
@@ -737,13 +733,8 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
                 break;
             case MediaStore.ACTION_VIDEO_CAPTURE:
                 isVideo = true;
-                try {
-                    mVideoFileDescriptor = getContentResolver().openFileDescriptor(mSaveFileUri, "rw").getFileDescriptor();
-                } catch (FileNotFoundException e) {
-                    showErrorDialog("could not create target file");
-                }
-                mDuration = intent.getIntExtra(MediaStore.EXTRA_DURATION_LIMIT, mDuration);
 
+                mDuration = intent.getIntExtra(MediaStore.EXTRA_DURATION_LIMIT, mDuration);
                 mQuality = intent.getIntExtra(MediaStore.EXTRA_VIDEO_QUALITY, mQuality);
                 break;
             default:
@@ -1277,7 +1268,6 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
     }
 
     private Size setUpMediaRecorder() throws IOException {
-
         CamcorderProfile profile;
 
         if (mQuality ==  0) {
@@ -1292,7 +1282,13 @@ public class CaptureActivity extends Activity implements View.OnTouchListener {
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
 
-        mMediaRecorder.setOutputFile(mVideoFileDescriptor);
+        FileDescriptor videoFileDescriptor = null;
+        try {
+            videoFileDescriptor = getContentResolver().openFileDescriptor(mSaveFileUri, "rw").getFileDescriptor();
+        } catch (FileNotFoundException e) {
+            showErrorDialog("could not create target file");
+        }
+        mMediaRecorder.setOutputFile(videoFileDescriptor);
 
         mMediaRecorder.setVideoFrameRate(profile.videoFrameRate);
 

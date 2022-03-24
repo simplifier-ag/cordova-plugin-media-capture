@@ -326,11 +326,6 @@ capturing a video clip, the `CaptureErrorCB` callback executes with a
 
     navigator.device.capture.captureAudio(captureSuccess, captureError, options);
 
-### Android Quirks
-
-- The `duration` parameter is not supported.  Recording lengths can't be limited programmatically.
-
-
 ### iOS Quirks
 
 - The `limit` parameter is not supported, so only one recording can be created for each invocation.
