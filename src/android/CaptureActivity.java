@@ -403,8 +403,7 @@ public class CaptureActivity extends AppCompatActivity {
 				mQuality = intent.getIntExtra(MediaStore.EXTRA_VIDEO_QUALITY, mQuality);
 				break;
 			default:
-				//defaults to picture mode
-				break;
+				return;
 		}
 
 		if (mSaveFileUri == null) {

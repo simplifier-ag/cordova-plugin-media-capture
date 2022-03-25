@@ -165,7 +165,7 @@
         <resource-file src="src/android/res/drawable/mediacap_stop.xml" target="res/drawable/mediacap_stop.xml"/>
         <resource-file src="src/android/res/drawable/mediacap_switch.xml" target="res/drawable/mediacap_switch.xml"/>
 
-        <resource-file src="src/android/res/menu/mediacap_flashmodes.xml" target="res/drawable/menu/mediacap_flashmodes.xml"/>
+        <resource-file src="src/android/res/menu/mediacap_flashmodes.xml" target="res/menu/mediacap_flashmodes.xml"/>
 
         <resource-file src="src/android/res/layout/mediacap_recorder_layout.xml" target="res/layout/mediacap_recorder_layout.xml"/>
         <resource-file src="src/android/res/layout/mediacap_layout.xml" target="res/layout/mediacap_layout.xml"/>
