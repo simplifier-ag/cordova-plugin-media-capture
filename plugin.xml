@@ -132,7 +132,6 @@
         <framework src="src/android/build.gradle" custom="true" type="gradleReference"/>
 
         <source-file src="src/android/AudioCaptureActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
-        <source-file src="src/android/AutoFitTextureView.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/Capture.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/CaptureActivity.java" target-dir="src/org/apache/cordova/mediacapture" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/mediacapture" />
