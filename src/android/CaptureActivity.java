@@ -5,6 +5,7 @@ import static org.apache.cordova.mediacapture.Capture.CAPTURE_IMAGE;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.PointF;
 import android.net.Uri;
 import android.os.Bundle;
@@ -159,6 +160,12 @@ public class CaptureActivity extends AppCompatActivity {
 				mFlashOffMenu.setVisible(options.getSupportedFlash().contains(Flash.OFF));
 				mFlashTorchMenu.setVisible(options.getSupportedFlash().contains(Flash.TORCH));
 			}
+
+			if (mCameraView.getMode() == Mode.PICTURE) {
+				mCaptureButton.setImageResource(R.getDrawable(CaptureActivity.this, "mediacap_capture"));
+			} else {
+				mCaptureButton.setImageResource(R.getDrawable(CaptureActivity.this, "mediacap_record"));
+			}
 		}
 
 		@Override
@@ -188,6 +195,7 @@ public class CaptureActivity extends AppCompatActivity {
 			LOG.v(TAG, "onPictureTaken - size %s", result.getSize());
 
 			setLoadingIndicator(true);
+			mCameraView.close();
 			result.toBitmap(new BitmapCallback() {
 				@Override
 				public void onBitmapReady(@Nullable Bitmap bitmap) {
@@ -199,7 +207,6 @@ public class CaptureActivity extends AppCompatActivity {
 								mCameraPreviewLayout.setVisibility(View.GONE);
 								mPicturePreviewLayout.setVisibility(View.VISIBLE);
 
-								mCameraView.close();
 
 								mCapturedImageView.setImageBitmap(bitmap);
 
@@ -264,7 +271,6 @@ public class CaptureActivity extends AppCompatActivity {
 				mCameraPreviewLayout.setVisibility(View.GONE);
 				mVideoPreviewLayout.setVisibility(View.VISIBLE);
 				mVideoView.setVideoURI(mSaveFileUri);
-				mCaptureButton.setImageResource(R.getDrawable(CaptureActivity.this, "mediacap_capture"));
 			} else {
 				deleteRecording();
 
@@ -272,6 +278,8 @@ public class CaptureActivity extends AppCompatActivity {
 				setResult(Activity.RESULT_CANCELED, resultIntent);
 				finish();
 			}
+
+			setLoadingIndicator(false);
 		}
 
 		@Override
@@ -300,6 +308,7 @@ public class CaptureActivity extends AppCompatActivity {
 
 		@Override
 		public void onVideoRecordingStart() {
+			setLoadingIndicator(false);
 			LOG.d(TAG, "onVideoRecordingStart");
 			Helper.lockOrientation(CaptureActivity.this);
 			mCaptureButton.setImageResource(
@@ -341,8 +350,8 @@ public class CaptureActivity extends AppCompatActivity {
 			if (mDurationTimer != null) {
 				mDurationTimer.cancel();
 			}
-			mCaptureButton.setImageResource(R.getDrawable(CaptureActivity.this, "mediacap_capture"));
 			mRecordIcon.clearAnimation();
+			setLoadingIndicator(false);
 		}
 
 		@Override
@@ -383,7 +392,7 @@ public class CaptureActivity extends AppCompatActivity {
 		} else {
 			//should not happen
 			try {
-				mSaveFileUri = FileHelper.getDataUriForMediaFile(CAPTURE_IMAGE, this);
+				mSaveFileUri = FileHelper.getUriFromFile(FileHelper.getMediaFile(CAPTURE_IMAGE, this), this);
 			} catch (IllegalArgumentException | IOException e) {
 				LOG.e(TAG, "error creating data uri");
 			}
@@ -478,6 +487,8 @@ public class CaptureActivity extends AppCompatActivity {
 		mRecordStats = findViewById(R.getId(this, "record_stats"));
 		mRecordingDurationView = findViewById(R.getId(this, "record_duration"));
 		mBlink = AnimationUtils.loadAnimation(this, R.getAnimation(this, "mediacap_blink"));
+
+		mRecordIcon.setColorFilter(Color.RED);
 
 		final PopupMenu popupMenu = new PopupMenu(this, mChangeFlashModeMenu);
 		popupMenu.inflate(R.getMenu(this, "mediacap_flashmodes"));
@@ -661,6 +672,7 @@ public class CaptureActivity extends AppCompatActivity {
 		} catch (FileNotFoundException e) {
 			Helper.showErrorDialog(R.localize(this, "mediacap_error_file"), this);
 		}
+		setLoadingIndicator(true);
 	}
 
 	private void updateDurationView(long elapsed) {
@@ -680,8 +692,10 @@ public class CaptureActivity extends AppCompatActivity {
 
 	private void stopCaptureVideo(boolean wasCanceled) {
 		mWasCanceled = wasCanceled;
-		if (mCameraView.isTakingVideo())
+		if (mCameraView.isTakingVideo()) {
+			setLoadingIndicator(true);
 			mCameraView.stopVideo();
+		}
 	}
 
 	private void deleteRecording() {
@@ -751,5 +765,7 @@ public class CaptureActivity extends AppCompatActivity {
 			LOG.e(TAG, "stopping background thread failed", e);
 		}
 	}
+
+
 
 }

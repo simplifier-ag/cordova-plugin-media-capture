@@ -143,7 +143,7 @@ public class AudioCaptureActivity extends Activity {
 		} else {
 			//should not happen
 			try {
-				mSaveFileUri = FileHelper.getDataUriForMediaFile(CAPTURE_AUDIO, this);
+				mSaveFileUri = FileHelper.getUriFromFile(FileHelper.getMediaFile(CAPTURE_AUDIO, this), this);
 			} catch (IllegalArgumentException | IOException e) {
 				LOG.e(TAG, "error creating data uri", e);
 				Helper.showErrorDialog(R.localize(this, "mediacap_error_file"), this);

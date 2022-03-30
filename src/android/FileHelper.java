@@ -22,9 +22,11 @@ import static org.apache.cordova.mediacapture.Capture.CAPTURE_AUDIO;
 import static org.apache.cordova.mediacapture.Capture.CAPTURE_IMAGE;
 import static org.apache.cordova.mediacapture.Capture.CAPTURE_VIDEO;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.webkit.MimeTypeMap;
 
 import androidx.annotation.Nullable;
@@ -82,22 +84,18 @@ public class FileHelper {
 	 * @return content://-uri for a given media file type
 	 */
 	@Nullable
-	public static Uri getDataUriForMediaFile(int type, Context context) throws IllegalArgumentException, IOException {
-
+	public static File getMediaFile(int type, Context context) throws IllegalArgumentException, IOException {
 		String applicationId = context.getPackageName();
 		File mediaStorageDir;
-		Uri uri;
+		//Uri uri;
 		String timeStamp = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault()).format(new Date());
+		File file;
 		switch (type) {
 			case CAPTURE_AUDIO: {
 				mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
 						Environment.DIRECTORY_MUSIC), applicationId);
 				String fileName = "AUDIO_" + timeStamp + ".mp3";
-				File audio = new File(mediaStorageDir, fileName);
-
-				uri = FileProvider.getUriForFile(context,
-						applicationId + ".cordova.plugin.mediacapture.provider",
-						audio);
+				file = new File(mediaStorageDir, fileName);
 				break;
 			}
 
@@ -105,22 +103,14 @@ public class FileHelper {
 				mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
 						Environment.DIRECTORY_PICTURES), applicationId);
 				String fileName = "IMG_" + timeStamp + ".jpg";
-				File image = new File(mediaStorageDir, fileName);
-
-				uri = FileProvider.getUriForFile(context,
-						applicationId + ".cordova.plugin.mediacapture.provider",
-						image);
+				file = new File(mediaStorageDir, fileName);
 			}
 			break;
 			case CAPTURE_VIDEO: {
 				mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
 						Environment.DIRECTORY_MOVIES), applicationId);
 				String fileName = "VID_" + timeStamp + ".mp4";
-				File video = new File(mediaStorageDir, fileName);
-
-				uri = FileProvider.getUriForFile(context,
-						applicationId + ".cordova.plugin.mediacapture.provider",
-						video);
+				file = new File(mediaStorageDir, fileName);
 
 			}
 			break;
@@ -128,13 +118,25 @@ public class FileHelper {
 				return null;
 		}
 
+/*		uri = FileProvider.getUriForFile(context,
+				applicationId + ".cordova.plugin.mediacapture.provider",
+				file);*/
+
 		if (!mediaStorageDir.exists()) {
 			if (!mediaStorageDir.mkdirs()) {
 				LOG.d(LOG_TAG, "failed to create directory");
 				return null;
 			}
 		}
-		return uri;
+
+		//uri = addContentValues(uri, context);
+
+		return file;
 	}
 
+	protected static Uri getUriFromFile(File file, Context context) {
+		return FileProvider.getUriForFile(context,
+				context.getPackageName() + ".cordova.plugin.mediacapture.provider",
+				file);
+	}
 }
