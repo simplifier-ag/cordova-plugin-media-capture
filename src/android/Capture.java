@@ -24,7 +24,6 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -275,10 +274,11 @@ public class Capture extends CordovaPlugin {
 				Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
 
 				mRequestedFile = FileHelper.getMediaFile(CAPTURE_AUDIO, cordova.getContext());
-				intent.putExtra(MediaStore.EXTRA_OUTPUT, FileHelper.getUriFromFile(mRequestedFile, cordova.getContext()));
+				Uri uri = FileHelper.getUriFromFile(mRequestedFile, cordova.getContext());
+				intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
 				intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, req.duration);
 				intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-				LOG.d(LOG_TAG, "Recording audio and saving to: " + mRequestedFile);
+				LOG.d(LOG_TAG, "Recording audio and saving to: " + uri);
 
 				//enable activity's intent filter to appear in camera app chooser dialog
 				setActivityEnabled(this.cordova.getActivity(), AudioCaptureActivity.class.getCanonicalName(), true);
@@ -315,17 +315,18 @@ public class Capture extends CordovaPlugin {
 				this.numPics = cursor.getCount();
 				cursor.close();
 
+				mRequestedFile = FileHelper.getMediaFile(CAPTURE_IMAGE, cordova.getContext());
+				Uri uri = FileHelper.getUriFromFile(mRequestedFile, cordova.getContext());
 				Intent intent;
 				if (req.useInternalCameraApp) {
-					intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE, FileHelper.getUriFromFile(mRequestedFile, cordova.getContext()), cordova.getActivity(), CaptureActivity.class);
+					intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE, uri, cordova.getActivity(), CaptureActivity.class);
 				} else {
 					intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 				}
 
-				mRequestedFile = FileHelper.getMediaFile(CAPTURE_IMAGE, cordova.getContext());
-				intent.putExtra(MediaStore.EXTRA_OUTPUT, FileHelper.getUriFromFile(mRequestedFile, cordova.getContext()));
+				intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
 				intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-				LOG.d(LOG_TAG, "Taking a picture and saving to: " + mRequestedFile);
+				LOG.d(LOG_TAG, "Taking a picture and saving to: " + uri);
 
 				//enable activity's intent filter to appear in camera app chooser dialog
 				setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), true);
@@ -354,17 +355,18 @@ public class Capture extends CordovaPlugin {
 			PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA});
 		} else {
 			try {
+				mRequestedFile = FileHelper.getMediaFile(CAPTURE_VIDEO, cordova.getContext());
+				Uri uri = FileHelper.getUriFromFile(mRequestedFile, cordova.getContext());
 				Intent intent = req.useInternalCameraApp
-						? new Intent(MediaStore.ACTION_VIDEO_CAPTURE, FileHelper.getUriFromFile(mRequestedFile, cordova.getContext()), cordova.getActivity(), CaptureActivity.class)
+						? new Intent(MediaStore.ACTION_VIDEO_CAPTURE, uri, cordova.getActivity(), CaptureActivity.class)
 						: new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
 
-				mRequestedFile = FileHelper.getMediaFile(CAPTURE_VIDEO, cordova.getContext());
-				intent.putExtra(MediaStore.EXTRA_OUTPUT, FileHelper.getUriFromFile(mRequestedFile, cordova.getContext()));
+				intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
 				intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
 				intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, req.duration);
 				intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, req.quality);
-				LOG.d(LOG_TAG, "Recording a video and saving to: " + mRequestedFile);
+				LOG.d(LOG_TAG, "Recording a video and saving to: " + uri);
 
 				//enable activity's intent filter to appear in camera app chooser dialog
 				setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), true);
@@ -477,7 +479,7 @@ public class Capture extends CordovaPlugin {
 
 	public void onAudioActivityResult(Request req, Uri result) {
 		// create a file object from the audio absolute path
-		req.results.put(createMediaFile(result, CAPTURE_AUDIO));
+		req.results.put(createMediaFile(result));
 
 		if (req.results.length() >= req.limit) {
 			// Send Uri back to JavaScript for listening to audio
@@ -490,7 +492,7 @@ public class Capture extends CordovaPlugin {
 
 	public void onImageActivityResult(Request req, Uri result) {
 		// Add image to results
-		req.results.put(createMediaFile(result, CAPTURE_IMAGE));
+		req.results.put(createMediaFile(result));
 
 		checkForDuplicateImage();
 
@@ -504,7 +506,7 @@ public class Capture extends CordovaPlugin {
 	}
 
 	public void onVideoActivityResult(Request req, Uri result) {
-		req.results.put(createMediaFile(result, CAPTURE_VIDEO));
+		req.results.put(createMediaFile(result));
 
 		if (req.results.length() >= req.limit) {
 			// Send Uri back to JavaScript for viewing video
@@ -522,6 +524,7 @@ public class Capture extends CordovaPlugin {
 	 */
 	@SuppressLint("Range")
 	private JSONObject createMediaFile(Uri data) {
+
 
 		JSONObject obj = new JSONObject();
 
@@ -651,13 +654,6 @@ public class Capture extends CordovaPlugin {
 		} else {
 			return MediaStore.Images.Media.INTERNAL_CONTENT_URI;
 		}
-	}
-
-	private File getFileFromUri(Uri uri, Context context) {
-		File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-				Environment.DIRECTORY_MOVIES), context.getPackageName());
-		return new File(mediaStorageDir +
-				File.separator + uri.getLastPathSegment());
 	}
 
 	private void executeRequest(Request req) {

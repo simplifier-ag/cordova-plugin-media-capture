@@ -5,7 +5,6 @@ import static org.apache.cordova.mediacapture.Capture.CAPTURE_IMAGE;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.PointF;
 import android.net.Uri;
 import android.os.Bundle;
@@ -488,8 +487,6 @@ public class CaptureActivity extends AppCompatActivity {
 		mRecordingDurationView = findViewById(R.getId(this, "record_duration"));
 		mBlink = AnimationUtils.loadAnimation(this, R.getAnimation(this, "mediacap_blink"));
 
-		mRecordIcon.setColorFilter(Color.RED);
-
 		final PopupMenu popupMenu = new PopupMenu(this, mChangeFlashModeMenu);
 		popupMenu.inflate(R.getMenu(this, "mediacap_flashmodes"));
 		popupMenu.setForceShowIcon(true);
@@ -765,7 +762,4 @@ public class CaptureActivity extends AppCompatActivity {
 			LOG.e(TAG, "stopping background thread failed", e);
 		}
 	}
-
-
-
 }

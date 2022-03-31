@@ -22,11 +22,9 @@ import static org.apache.cordova.mediacapture.Capture.CAPTURE_AUDIO;
 import static org.apache.cordova.mediacapture.Capture.CAPTURE_IMAGE;
 import static org.apache.cordova.mediacapture.Capture.CAPTURE_VIDEO;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.webkit.MimeTypeMap;
 
 import androidx.annotation.Nullable;
