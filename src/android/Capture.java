@@ -161,14 +161,14 @@ public class Capture extends CordovaPlugin {
 				this.captureAudio(pendingRequests.createRequest(CAPTURE_AUDIO, options, callbackContext));
 				break;
 			case "captureImage":
-				if (!options.has("useInternalCameraApp")) {
+				if (!options.has("useInternalCameraApp") || (options.has("useInternalCameraApp") && !options.getBoolean("useInternalCameraApp"))) {
 					//check cordova options
 					options.put("useInternalCameraApp", preferences.getBoolean("useInternalCameraApp", false));
 				}
 				this.captureImage(pendingRequests.createRequest(CAPTURE_IMAGE, options, callbackContext));
 				break;
 			case "captureVideo":
-				if (!options.has("useInternalCameraApp")) {
+				if (!options.has("useInternalCameraApp") || (options.has("useInternalCameraApp") && !options.getBoolean("useInternalCameraApp"))) {
 					//check cordova options
 					options.put("useInternalCameraApp", preferences.getBoolean("useInternalCameraApp", false));
 				}
