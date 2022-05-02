@@ -532,7 +532,7 @@ _Bool saveToGallery = YES;
     NSDictionary* fileAttrs = [fileMgr attributesOfItemAtPath:fullPath error:nil];
     [fileDict setObject:[NSNumber numberWithUnsignedLongLong:[fileAttrs fileSize]] forKey:@"size"];
     NSDate* modDate = [fileAttrs fileModificationDate];
-    NSNumber* msDate = [NSNumber numberWithDouble:[modDate timeIntervalSince1970] * 1000];
+    NSNumber* msDate = [NSNumber numberWithInteger:[modDate timeIntervalSince1970] * 1000];
     [fileDict setObject:msDate forKey:@"lastModifiedDate"];
 
     return fileDict;
