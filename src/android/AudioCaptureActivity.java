@@ -4,7 +4,6 @@ import static org.apache.cordova.mediacapture.Capture.CAPTURE_AUDIO;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -17,13 +16,15 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
-import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v7.widget.AppCompatTextView;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.AppCompatTextView;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.apache.cordova.BuildConfig;
 import org.apache.cordova.LOG;
@@ -35,53 +36,78 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 public class AudioCaptureActivity extends Activity {
-	private static final String TAG = AudioCaptureActivity.class.getSimpleName();
-
 	/**
 	 * Visualizer refresh rate in ms
 	 */
 	public static final int REPEAT_INTERVAL = 40;
-
+	private static final String TAG = AudioCaptureActivity.class.getSimpleName();
+	/**
+	 * Handler for updating visualizer
+	 */
+	private final Handler mHandler = new Handler(); // Handler for updating the visualizer
 	//Views
 	private VisualizerView mVisualizerView;
 	private AppCompatTextView mRecordTimer;
 	private FloatingActionButton mToggleRecordButton;
 	private FloatingActionButton mTogglePauseButton;
-
 	/**
 	 * records audio
 	 */
 	private MediaRecorder mMediaRecorder;
-
 	/**
 	 * This the output uri if MediaStore.EXTRA_OUTPUT Intent extra exists
 	 */
 	private Uri mSaveFileUri;
-
 	/**
 	 * timer for duration
 	 */
 	private PausableCountDownTimer mDurationTimer;
-
 	/**
 	 * recording limit in seconds, 0 = unlimited
 	 */
 	private int mDuration = 0;
-
 	/**
 	 * recording is currently running
 	 */
 	private boolean mIsRecording = false;
-
 	/**
 	 * recording is currently paused
 	 */
 	private boolean mIsPaused = false;
-
+	private final View.OnClickListener togglePauseListener = view -> {
+		if (!mIsPaused) {
+			pauseRecorder();
+		} else {
+			resumeRecorder();
+		}
+	};
 	/**
-	 * Handler for updating visualizer
+	 * updates the visualizer every 50 milliseconds
 	 */
-	private final Handler mHandler = new Handler(); // Handler for updating the visualizer
+	private final Runnable updateVisualizer = new Runnable() {
+		@Override
+		public void run() {
+			if (mIsRecording) // if we are already recording
+			{
+				if (!mIsPaused) {
+					// get the current amplitude
+					int x = mMediaRecorder.getMaxAmplitude();
+					mVisualizerView.addAmplitude(x); // update the VisualizeView
+					mVisualizerView.invalidate(); // refresh the VisualizerView
+				}
+
+				// update in 40 milliseconds
+				mHandler.postDelayed(this, REPEAT_INTERVAL);
+			}
+		}
+	};
+	private final View.OnClickListener toggleRecordListener = view -> {
+		if (!mIsRecording) {
+			startRecorder();
+		} else {
+			stopRecorder();
+		}
+	};
 
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -91,7 +117,7 @@ public class AudioCaptureActivity extends Activity {
 			LOG.setLogLevel(LOG.VERBOSE);
 		}
 
-		setContentView(R.getLayout(this, "audio_recorder_layout"));
+		setContentView(R.getLayout(this, "mediacap_recorder_layout"));
 
 		mVisualizerView = findViewById(R.getId(this, "visualizer"));
 		mRecordTimer = findViewById(R.getId(this, "recordTimer"));
@@ -117,10 +143,10 @@ public class AudioCaptureActivity extends Activity {
 		} else {
 			//should not happen
 			try {
-				mSaveFileUri = FileHelper.getDataUriForMediaFile(CAPTURE_AUDIO, this);
-			} catch (IllegalArgumentException e) {
+				mSaveFileUri = FileHelper.getUriFromFile(FileHelper.getMediaFile(CAPTURE_AUDIO, this), this);
+			} catch (IllegalArgumentException | IOException e) {
 				LOG.e(TAG, "error creating data uri", e);
-				showErrorDialog("Could not create target file");
+				Helper.showErrorDialog(R.localize(this, "mediacap_error_file"), this);
 				return;
 			}
 		}
@@ -157,43 +183,6 @@ public class AudioCaptureActivity extends Activity {
 		super.onBackPressed();
 	}
 
-	private final View.OnClickListener toggleRecordListener = view -> {
-		if (!mIsRecording) {
-			startRecorder();
-		} else {
-			stopRecorder();
-		}
-	};
-
-	private final View.OnClickListener togglePauseListener = view -> {
-		if (!mIsPaused) {
-			pauseRecorder();
-		} else {
-			resumeRecorder();
-		}
-	};
-
-	/**
-	 * updates the visualizer every 50 milliseconds
-	 */
-	private final Runnable updateVisualizer = new Runnable() {
-		@Override
-		public void run() {
-			if (mIsRecording) // if we are already recording
-			{
-				if (!mIsPaused) {
-					// get the current amplitude
-					int x = mMediaRecorder.getMaxAmplitude();
-					mVisualizerView.addAmplitude(x); // update the VisualizeView
-					mVisualizerView.invalidate(); // refresh the VisualizerView
-				}
-
-				// update in 40 milliseconds
-				mHandler.postDelayed(this, REPEAT_INTERVAL);
-			}
-		}
-	};
-
 	/**
 	 * Stops audio recorder and timer
 	 */
@@ -218,7 +207,6 @@ public class AudioCaptureActivity extends Activity {
 	/**
 	 * Start audio recorder
 	 */
-	@SuppressLint("SourceLockedOrientationActivity")
 	private void startRecorder() {
 		if (!isMicAvailable()) {
 			Toast.makeText(this,
@@ -246,7 +234,7 @@ public class AudioCaptureActivity extends Activity {
 			audioFileDescriptor = getContentResolver().openFileDescriptor(mSaveFileUri, "rw").getFileDescriptor();
 		} catch (FileNotFoundException e) {
 			LOG.e(TAG, "error getting file descriptor", e);
-			showErrorDialog("Could not create target file");
+			Helper.showErrorDialog(R.localize(this, "mediacap_error_file"), this);
 			return;
 		}
 		mMediaRecorder.setOutputFile(audioFileDescriptor);
@@ -294,7 +282,7 @@ public class AudioCaptureActivity extends Activity {
 			mHandler.post(updateVisualizer);
 		} catch (IllegalStateException | IOException e) {
 			LOG.e(TAG, e.getMessage(), e);
-			showErrorDialog("Could not start audio recorder");
+			Helper.showErrorDialog(R.localize(this, "mediacap_error_audio_recorder"), this);
 			return;
 		}
 
@@ -345,17 +333,6 @@ public class AudioCaptureActivity extends Activity {
 	}
 
 	/**
-	 * Shows an error message dialog.
-	 */
-	private void showErrorDialog(String msg) {
-		new AlertDialog.Builder(this)
-				.setMessage(msg)
-				.setPositiveButton(android.R.string.ok, (dialog, which) -> finish())
-				.create()
-				.show();
-	}
-
-	/**
 	 * Updates record timer view
 	 *
 	 * @param elapsed the recorded seconds
@@ -401,7 +378,8 @@ public class AudioCaptureActivity extends Activity {
 	private boolean isMicAvailable() {
 		boolean available = true;
 
-		//Checking availability by starting a record using AudioRecording and checking the states
+		//permissions are requested in Capture.java
+		@SuppressLint("MissingPermission")
 		AudioRecord recorder =
 				new AudioRecord(MediaRecorder.AudioSource.MIC, 44100,
 						AudioFormat.CHANNEL_IN_MONO,

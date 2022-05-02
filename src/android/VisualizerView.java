@@ -11,12 +11,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class VisualizerView extends View {
-	private int LINE_WIDTH = 1; // width of visualizer lines
 	private static final int LINE_SCALE = 60; // scales visualizer lines
+	private final Paint linePaint; // specifies line drawing characteristics
+	private int LINE_WIDTH = 1; // width of visualizer lines
 	private List<Float> amplitudes = new ArrayList<>(); // amplitudes for line lengths
 	private int width; // width of this View
 	private int height; // height of this View
-	private final Paint linePaint; // specifies line drawing characteristics
 	private boolean drawAmplitude = true;
 
 	// constructor

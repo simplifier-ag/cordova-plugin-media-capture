@@ -8,20 +8,6 @@ import android.text.Spanned;
 import android.util.TypedValue;
 
 public class R {
-	public static class ResourceTypes {
-		static String LAYOUT = "layout";
-		static String STRING = "string";
-		static String ID = "id";
-		static String DRAWABLE = "drawable";
-		static String XML = "xml";
-		static String STYLE = "style";
-		static String ANIMATION = "anim";
-		static String RAW = "raw";
-		static String MIPMAP = "mipmap";
-		static String COLOR = "color";
-		static String ATTR = "attr";
-	}
-
 	/**
 	 * @param filename     Name of the file
 	 * @param resourceType Type of resource (ID, STRING, LAYOUT, DRAWABLE)
@@ -52,7 +38,8 @@ public class R {
 
 	/**
 	 * Fetches a translated string by identifier. Use this method if the fetched string contains HTML tags.
-	 * @param context Context
+	 *
+	 * @param context    Context
 	 * @param identifier identifier of the String
 	 * @param args
 	 * @return Formatted Spanned
@@ -122,6 +109,25 @@ public class R {
 		TypedValue typedValue = new TypedValue();
 		context.getTheme().resolveAttribute(getAttributeId(context, identifier), typedValue, true);
 		return typedValue.data;
+	}
+
+	public static int getMenu(Context context, String identifier) {
+		return getResourceId(context, identifier, ResourceTypes.MENU);
+	}
+
+	public static class ResourceTypes {
+		static String LAYOUT = "layout";
+		static String STRING = "string";
+		static String ID = "id";
+		static String DRAWABLE = "drawable";
+		static String XML = "xml";
+		static String STYLE = "style";
+		static String ANIMATION = "anim";
+		static String RAW = "raw";
+		static String MIPMAP = "mipmap";
+		static String COLOR = "color";
+		static String ATTR = "attr";
+		static String MENU = "menu";
 	}
 }
 
