@@ -173,7 +173,7 @@ public class ImageSaver implements Runnable {
                 //store meta data
                 try (ParcelFileDescriptor parcelFileDescriptor = mContext.getContentResolver().openFileDescriptor(mUri, "rw")) {
                     exif = new ExifInterface(parcelFileDescriptor.getFileDescriptor());
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault());
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.getDefault());
                     sdf.setTimeZone(TimeZone.getTimeZone("Etc/UTC"));
                     String date = sdf.format(new Date());
                     exif.setAttribute(ExifInterface.TAG_DATETIME, date);

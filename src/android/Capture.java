@@ -20,7 +20,6 @@ package org.apache.cordova.mediacapture;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Intent;
@@ -35,6 +34,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
+import android.support.annotation.Nullable;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -47,7 +47,12 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Locale;
 
 public class Capture extends CordovaPlugin {
 
@@ -491,7 +496,7 @@ public class Capture extends CordovaPlugin {
         String name = "";
         String mimetype = "";
         int size = 0;
-        String lastModifiedDate = "";
+        long lastModifiedDate = 0;
         ContentResolver cr = cordova.getContext().getContentResolver();
 
         Cursor metaCursor = cr.query(data, projection, null, null, null);
@@ -504,7 +509,7 @@ public class Capture extends CordovaPlugin {
                     if (metaCursor.getColumnIndex(MediaStore.MediaColumns.SIZE) > -1)
                         size = metaCursor.getInt(metaCursor.getColumnIndex(MediaStore.MediaColumns.SIZE));
                     if (metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED) > -1) {
-                        lastModifiedDate = metaCursor.getString(metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED));
+                        lastModifiedDate = metaCursor.getLong(metaCursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)) * 1000;
                     }
                 }
 
@@ -512,11 +517,11 @@ public class Capture extends CordovaPlugin {
                 try (ParcelFileDescriptor pfd = cr.openFileDescriptor(data, "r")) {
                     pfd.getFileDescriptor().sync();
 
-                    if ( lastModifiedDate.isEmpty()) {
+                    if (lastModifiedDate == 0) {
                         ExifInterface exif;
                         try {
                             exif = new ExifInterface(pfd.getFileDescriptor());
-                            lastModifiedDate = exif.getAttribute(ExifInterface.TAG_DATETIME);
+                            lastModifiedDate = convertExifDateTime(exif.getAttribute(ExifInterface.TAG_DATETIME));
                         } catch (IOException e) {
                             LOG.e(LOG_TAG, "Error reading exif interface for %s", data);
                         }
@@ -546,6 +551,25 @@ public class Capture extends CordovaPlugin {
             e.printStackTrace();
         }
         return obj;
+    }
+
+    private long convertExifDateTime(@Nullable String EXIF_TAG_DATETIME){
+        if (EXIF_TAG_DATETIME == null) {
+            return 0;
+        }
+
+        try {
+            DateFormat formatter = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US);
+            Date date = formatter.parse(EXIF_TAG_DATETIME);
+
+            if (date != null) {
+                return date.getTime();
+            }
+        } catch (ParseException e) {
+            LOG.e("CaptureMedia", e.getMessage(), e);
+        }
+
+        return 0;
     }
 
     private JSONObject createErrorObject(int code, String message) {
