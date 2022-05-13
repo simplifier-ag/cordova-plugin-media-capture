@@ -1,7 +1,5 @@
 package org.apache.cordova.mediacapture;
 
-import static org.apache.cordova.mediacapture.Capture.CAPTURE_IMAGE;
-
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -54,7 +52,6 @@ import org.apache.cordova.LOG;
 
 import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Locale;
@@ -388,13 +385,6 @@ public class CaptureActivity extends AppCompatActivity {
 				&& intent.getExtras().get(MediaStore.EXTRA_OUTPUT) != null) {
 			//Intent contain MediaStore.EXTRA_OUTPUT which tells us that the picture have to be saved in MediaStore using ContentResolver
 			mSaveFileUri = (Uri) intent.getExtras().get(MediaStore.EXTRA_OUTPUT);
-		} else {
-			//should not happen
-			try {
-				mSaveFileUri = FileHelper.getUriFromFile(FileHelper.getMediaFile(CAPTURE_IMAGE, this), this);
-			} catch (IllegalArgumentException | IOException e) {
-				LOG.e(TAG, "error creating data uri");
-			}
 		}
 
 		switch (intent.getAction()) {
@@ -412,6 +402,10 @@ public class CaptureActivity extends AppCompatActivity {
 				break;
 			default:
 				return;
+		}
+
+		if (mSaveFileUri == null) {
+			mSaveFileUri = FileHelper.getAndCreateFile(intent.getAction(), this);
 		}
 
 		if (mSaveFileUri == null) {

@@ -243,7 +243,7 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:src="@drawable/mediacap_record"
-			android:tint="@color/red"/>
+			android:tint="@android:color/holo_red_dark"/>
 
 		<androidx.appcompat.widget.AppCompatTextView
 			android:id="@+id/record_duration"

@@ -44,6 +44,9 @@ public class PendingRequests {
 	private Bundle lastSavedState;
 	private CallbackContext resumeContext;
 
+	//force internal camera activity
+	public boolean useInternalCameraApp;
+
 	/**
 	 * Creates a request and adds it to the array of pending requests. Each created request gets a
 	 * unique result code for use with startActivityForResult() and requestPermission()

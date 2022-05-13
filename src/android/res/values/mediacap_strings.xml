@@ -10,4 +10,6 @@
 	<string name="mediacap_error_audio_recorder">Could not start audio recorder</string>
 	<string name="mediacap_error_save_image">Failed saving image</string>
 	<string name="mediacap_error_starting_camera">Failed to start camera</string>
+	<string name="mediacap_activity_record_audio">Record Audio</string>
+	<string name="mediacap_activity_capture_image_video">Image/Video Capture</string>
 </resources>

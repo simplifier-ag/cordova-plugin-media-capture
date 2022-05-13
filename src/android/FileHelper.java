@@ -18,31 +18,26 @@
  */
 package org.apache.cordova.mediacapture;
 
-import static org.apache.cordova.mediacapture.Capture.CAPTURE_AUDIO;
-import static org.apache.cordova.mediacapture.Capture.CAPTURE_IMAGE;
-import static org.apache.cordova.mediacapture.Capture.CAPTURE_VIDEO;
+import static org.apache.cordova.mediacapture.Capture.AUDIO_MPEG;
+import static org.apache.cordova.mediacapture.Capture.IMAGE_JPEG;
+import static org.apache.cordova.mediacapture.Capture.VIDEO_MP4;
 
-import android.content.Context;
+import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.webkit.MimeTypeMap;
 
-import androidx.annotation.Nullable;
-
 import org.apache.cordova.CordovaInterface;
-import org.apache.cordova.LOG;
 
 import java.io.File;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
 
 // TODO: Replace with CordovaResourceApi.getMimeType() post 3.1.
 public class FileHelper {
-	private final static String LOG_TAG = FileHelper.class.getSimpleName();
-
-
 	public static String getMimeTypeForExtension(String path) {
 		String extension = path;
 		int lastDot = extension.lastIndexOf('.');
@@ -60,7 +55,7 @@ public class FileHelper {
 	/**
 	 * Returns the mime type of the data specified by the given URI string.
 	 *
-	 * @param uri String the URI string of the data
+	 * @param uri the URI string of the data
 	 * @return the mime type of the specified data
 	 */
 	public static String getMimeType(Uri uri, CordovaInterface cordova) {
@@ -74,67 +69,29 @@ public class FileHelper {
 		return mimeType;
 	}
 
-	/**
-	 * generates a file with MediaStore for a given media file type
-	 *
-	 * @param type    target media type
-	 * @param context activity context
-	 * @return content://-uri for a given media file type
-	 */
-	@Nullable
-	public static File getMediaFile(int type, Context context) throws IllegalArgumentException, IOException {
-		String applicationId = context.getPackageName();
-		File mediaStorageDir;
-		//Uri uri;
-		String timeStamp = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault()).format(new Date());
-		File file;
-		switch (type) {
-			case CAPTURE_AUDIO: {
-				mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-						Environment.DIRECTORY_MUSIC), applicationId);
-				String fileName = "AUDIO_" + timeStamp + ".mp3";
-				file = new File(mediaStorageDir, fileName);
-				break;
-			}
+	public static Uri getAndCreateFile(String action, Activity activity) {
+		ContentResolver contentResolver = activity.getContentResolver();
+		ContentValues cv = new ContentValues();
+		switch (action) {
+			case MediaStore.ACTION_VIDEO_CAPTURE:
+				cv.put(MediaStore.Video.Media.MIME_TYPE, VIDEO_MP4);
+				return contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, cv);
+			case MediaStore.ACTION_IMAGE_CAPTURE:
+				cv.put(MediaStore.Images.Media.MIME_TYPE, IMAGE_JPEG);
+				return contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+			case MediaStore.Audio.Media.RECORD_SOUND_ACTION:
+				cv.put(MediaStore.Audio.Media.MIME_TYPE, AUDIO_MPEG);
+				if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+					cv.put(MediaStore.Audio.Media.DATA,
+							new File(
+									Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
+									System.currentTimeMillis() + ".mp3"
+							).getAbsolutePath());
+				}
 
-			case CAPTURE_IMAGE: {
-				mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-						Environment.DIRECTORY_PICTURES), applicationId);
-				String fileName = "IMG_" + timeStamp + ".jpg";
-				file = new File(mediaStorageDir, fileName);
-			}
-			break;
-			case CAPTURE_VIDEO: {
-				mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-						Environment.DIRECTORY_MOVIES), applicationId);
-				String fileName = "VID_" + timeStamp + ".mp4";
-				file = new File(mediaStorageDir, fileName);
-
-			}
-			break;
+					return contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, cv);
 			default:
-				return null;
+				throw new IllegalStateException("Unexpected value: " + action);
 		}
-
-/*		uri = FileProvider.getUriForFile(context,
-				applicationId + ".cordova.plugin.mediacapture.provider",
-				file);*/
-
-		if (!mediaStorageDir.exists()) {
-			if (!mediaStorageDir.mkdirs()) {
-				LOG.d(LOG_TAG, "failed to create directory");
-				return null;
-			}
-		}
-
-		//uri = addContentValues(uri, context);
-
-		return file;
-	}
-
-	protected static Uri getUriFromFile(File file, Context context) {
-		return FileProvider.getUriForFile(context,
-				context.getPackageName() + ".cordova.plugin.mediacapture.provider",
-				file);
 	}
 }
