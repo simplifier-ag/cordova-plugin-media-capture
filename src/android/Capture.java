@@ -66,12 +66,18 @@ public class Capture extends CordovaPlugin {
 	private static final int CAPTURE_VIDEO = 2;     // Constant for capture video
 	private static final String LOG_TAG = "Capture";
 
-	private static final int CAPTURE_INTERNAL_ERR = 0;
-	//    private static final int CAPTURE_APPLICATION_BUSY = 1;
-//    private static final int CAPTURE_INVALID_ARGUMENT = 2;
-	private static final int CAPTURE_NO_MEDIA_FILES = 3;
-	private static final int CAPTURE_PERMISSION_DENIED = 4;
-	private static final int CAPTURE_NOT_SUPPORTED = 20;
+	// Camera or microphone failed to capture image or sound.
+	private final int CAPTURE_INTERNAL_ERR = 0;
+	// Camera application or audio capture application is currently serving other capture request.
+	private final int CAPTURE_APPLICATION_BUSY = 1;
+	// Invalid use of the API (e.g. limit parameter has value less than one).
+	private final int CAPTURE_INVALID_ARGUMENT = 2;
+	// User exited camera application or audio capture application before capturing anything.
+	private final int CAPTURE_NO_MEDIA_FILES = 3;
+	// User denied permissions required to perform the capture request.
+	private final int CAPTURE_PERMISSION_DENIED = 4;
+	// The requested capture operation is not supported.
+	private final int CAPTURE_NOT_SUPPORTED = 20;
 
 	private boolean cameraPermissionInManifest;     // Whether or not the CAMERA permission is declared in AndroidManifest.xml
 
@@ -256,6 +262,8 @@ public class Capture extends CordovaPlugin {
 				this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
 			} catch (ActivityNotFoundException ex) {
 				pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NOT_SUPPORTED, "No Activity found to handle Audio Capture."));
+			} catch (IllegalArgumentException e) {
+				pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Canceled."));
 			}
 		}
 	}
@@ -295,7 +303,11 @@ public class Capture extends CordovaPlugin {
 			this.numPics = cursor.getCount();
 			cursor.close();
 
-			fileUri = FileHelper.getAndCreateFile(MediaStore.ACTION_IMAGE_CAPTURE, cordova.getActivity());
+			try {
+				fileUri = FileHelper.getAndCreateFile(MediaStore.ACTION_IMAGE_CAPTURE, cordova.getActivity());
+			} catch (IllegalArgumentException e) {
+				pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Canceled."));
+			}
 
 			Intent intent = req.useInternalCameraApp
 					? new Intent(MediaStore.ACTION_IMAGE_CAPTURE, fileUri, cordova.getContext(), CaptureActivity.class)
@@ -330,7 +342,11 @@ public class Capture extends CordovaPlugin {
 			PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA});
 
 		} else {
-			fileUri = FileHelper.getAndCreateFile(MediaStore.ACTION_VIDEO_CAPTURE, cordova.getActivity());
+			try {
+				fileUri = FileHelper.getAndCreateFile(MediaStore.ACTION_VIDEO_CAPTURE, cordova.getActivity());
+			} catch (IllegalArgumentException e) {
+				pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Canceled."));
+			}
 
 			Intent intent = req.useInternalCameraApp
 					? new Intent(MediaStore.ACTION_VIDEO_CAPTURE, fileUri, cordova.getActivity(), CaptureActivity.class)

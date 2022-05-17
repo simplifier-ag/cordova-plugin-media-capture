@@ -76,18 +76,6 @@
             </feature>
         </config-file>
 
-        <config-file target="AndroidManifest.xml" parent="application">
-            <provider
-                android:name="org.apache.cordova.mediacapture.FileProvider"
-                android:authorities="${applicationId}.cordova.plugin.mediacapture.provider"
-                android:exported="false"
-                android:grantUriPermissions="true" >
-                <meta-data
-                    android:name="android.support.FILE_PROVIDER_PATHS"
-                    android:resource="@xml/mediacapture_provider_paths" />
-            </provider>
-        </config-file>
-
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.RECORD_AUDIO" />
             <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />

@@ -404,8 +404,14 @@ public class CaptureActivity extends AppCompatActivity {
 				return;
 		}
 
-		if (mSaveFileUri == null) {
-			mSaveFileUri = FileHelper.getAndCreateFile(intent.getAction(), this);
+		try {
+			if (mSaveFileUri == null) {
+				mSaveFileUri = FileHelper.getAndCreateFile(intent.getAction(), this);
+			}
+		} catch (IllegalArgumentException e) {
+			LOG.e(TAG, "error creating data uri", e);
+			Helper.showErrorDialog(R.localize(this, "mediacap_error_file"), this);
+			return;
 		}
 
 		if (mSaveFileUri == null) {

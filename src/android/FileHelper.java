@@ -69,7 +69,7 @@ public class FileHelper {
 		return mimeType;
 	}
 
-	public static Uri getAndCreateFile(String action, Activity activity) {
+	public static Uri getAndCreateFile(String action, Activity activity) throws IllegalArgumentException {
 		ContentResolver contentResolver = activity.getContentResolver();
 		ContentValues cv = new ContentValues();
 		switch (action) {
@@ -91,7 +91,7 @@ public class FileHelper {
 
 					return contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, cv);
 			default:
-				throw new IllegalStateException("Unexpected value: " + action);
+				throw new IllegalArgumentException("Unexpected action: " + action);
 		}
 	}
 }
