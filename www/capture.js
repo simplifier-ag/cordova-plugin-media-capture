@@ -81,12 +81,21 @@ Capture.prototype.captureVideo = function (successCallback, errorCallback, optio
 
 /**
  * Delete a file
+ * @param {String} file or content-uri
  * @param {Function} successCB
  * @param {Function} errorCB
- * @param {String} file or content-uri
  */
  Capture.prototype.deleteFile = function (file, successCallback, errorCallback) {
-	_capture('deleteFile', successCallback, errorCallback, file);
+    var filename = file.slice(file.lastIndexOf("/") + 1);
+    var path = file.slice(0, file.lastIndexOf("/"));
+    
+    window.resolveLocalFileSystemURL(path, function(dir) {
+        dir.getFile(filename, {
+            create: false
+        }, function(fileEntry) {
+            fileEntry.remove(successCallback, errorCallback);
+        }, errorCallback);
+    }, errorCallback);
 };
 
 module.exports = new Capture();

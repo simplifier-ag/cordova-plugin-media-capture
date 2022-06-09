@@ -129,10 +129,6 @@ public class Capture extends CordovaPlugin {
 				callbackContext.success(obj);
 				return true;
 			}
-			case "deleteFile": {
-				this.deleteFile(args.getString(0), callbackContext);
-				return true;
-			}
 			default:
 				break;
 		}
@@ -359,26 +355,6 @@ public class Capture extends CordovaPlugin {
 			LOG.d(LOG_TAG, "Taking a video and saving to: " + fileUri.toString());
 			setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), true);
 			this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
-		}
-	}
-
-	/**
-	 * Deletes a file or content uri from string
-	 */
-	public void deleteFile(String contentUri, CallbackContext callbackContext) {
-		try {
-			if (cordova.getContext().getContentResolver().delete(Uri.parse(contentUri), null, null) <= 0) {
-				File file = new File(contentUri);
-				if (!file.delete() || file.exists()) {
-					if (!file.getCanonicalFile().delete() || file.exists()) {
-						callbackContext.error("error deleting file");
-						return;
-					}
-				}
-			}
-			callbackContext.success();
-		} catch (Exception e) {
-			callbackContext.error(e.getMessage());
 		}
 	}
 
