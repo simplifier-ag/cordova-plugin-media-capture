@@ -19,30 +19,35 @@
  *
  */
 
-var MediaFile = require('./MediaFile');
+const MediaFile = require('./MediaFile');
 
 function wrapMediaFiles (pluginResult) {
-    var mediaFiles = [];
-    var i;
+    const mediaFiles = [];
+    let i;
     for (i = 0; i < pluginResult.length; i++) {
-        var mediaFile = new MediaFile();
-        mediaFile.name = pluginResult[i].name;
+        const mediaFile = new MediaFile(
+            pluginResult[i].name,
+            // Backwards compatibility
+            pluginResult[i].localURL || pluginResult[i].fullPath,
+            pluginResult[i].type,
+            pluginResult[i].lastModifiedDate,
+            pluginResult[i].size
+        );
 
-        var fullPath = device.platform === "iOS"
+
+        console.error("TODO check fullpath");
+        //new
+        mediaFile.fullPath = pluginResult[i].fullPath;
+        //old
+        mediaFile.fullPath = device.platform === "iOS"
             ? window.WkWebView.convertFilePath(pluginResult[i].fullPath)
             : pluginResult[i].fullPath;
 
-        // Backwards compatibility
-        mediaFile.localURL = pluginResult[i].localURL || fullPath;
-        mediaFile.fullPath = fullPath;
-        mediaFile.type = pluginResult[i].type;
-        mediaFile.lastModifiedDate = pluginResult[i].lastModifiedDate;
-        mediaFile.size = pluginResult[i].size;
         mediaFiles.push(mediaFile);
     }
     return mediaFiles;
 }
 
 module.exports = {
-    wrapMediaFiles: wrapMediaFiles
+    wrapMediaFiles
 };
