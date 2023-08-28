@@ -529,7 +529,7 @@ public class Capture extends CordovaPlugin {
 
     public void onImageActivityResult(Request req) {
         // Get the uri of the image
-        Uri data = imageUri;
+        Uri data = fileUri;
         if (data == null) {
             pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Error: data is null"));
             return;
@@ -691,9 +691,11 @@ public class Capture extends CordovaPlugin {
         int currentNumOfImages = cursor.getCount();
 
         // delete the duplicate file if the difference is 2
-        if ((currentNumOfImages - numPics) == 2) {
+        int index = cursor.getColumnIndex(MediaStore.Images.Media._ID);
+        if ((currentNumOfImages - numPics) == 2 && index >= 0) {
             cursor.moveToLast();
-            int id = Integer.valueOf(cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID))) - 1;
+
+            int id = cursor.getInt(index) - 1;
             Uri uri = Uri.parse(contentStore + "/" + id);
             this.cordova.getActivity().getContentResolver().delete(uri, null, null);
         }
