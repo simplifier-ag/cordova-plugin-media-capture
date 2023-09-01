@@ -985,17 +985,6 @@ _Bool saveToGallery = YES;
     return UIStatusBarStyleDefault;
 }
 
-- (void)viewWillAppear:(BOOL)animated
-{
-    if (IsAtLeastiOSVersion(@"7.0")) {
-        [[UIApplication sharedApplication] setStatusBarStyle:[self preferredStatusBarStyle]];
-    }
-
-    [super viewWillAppear:animated];
-
-    [self setupUI];
-}
-
 - (void)viewWillDisappear:(BOOL)animated
 {
     [self dismissAudioView:nil];
