@@ -654,13 +654,14 @@ public class Capture extends CordovaPlugin {
 		int currentNumOfImages = cursor.getCount();
 
 		// delete the duplicate file if the difference is 2
-		int index = cursor.getColumnIndex(MediaStore.Images.Media._ID);
-		if ((currentNumOfImages - numPics) == 2 && index >= 0) {
+		if ((currentNumOfImages - numPics) == 2) {
 			cursor.moveToLast();
-
-			int id = cursor.getInt(index) - 1;
-			Uri uri = Uri.parse(contentStore + "/" + id);
-			this.cordova.getActivity().getContentResolver().delete(uri, null, null);
+			int index = cursor.getColumnIndex(MediaStore.Images.Media._ID);
+			if (index >= 0) {
+				int id = cursor.getInt(index) - 1;
+				Uri uri = Uri.parse(contentStore + "/" + id);
+				this.cordova.getActivity().getContentResolver().delete(uri, null, null);
+			}
 		}
 		cursor.close();
 	}
