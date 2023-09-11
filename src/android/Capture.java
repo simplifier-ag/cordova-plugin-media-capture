@@ -18,33 +18,10 @@
 */
 package org.apache.cordova.mediacapture;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.LOG;
-import org.apache.cordova.PermissionHelper;
-import org.apache.cordova.PluginManager;
-import org.apache.cordova.file.FileUtils;
-import org.apache.cordova.file.LocalFilesystemURL;
-import org.apache.cordova.mediacapture.PendingRequests.Request;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
-import android.content.ActivityNotFoundException;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -52,8 +29,8 @@ import android.database.Cursor;
 import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.Bundle;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 
@@ -74,6 +51,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class Capture extends CordovaPlugin {
@@ -102,6 +80,20 @@ public class Capture extends CordovaPlugin {
 	private static final int CAPTURE_PERMISSION_DENIED = 4;
 	// The requested capture operation is not supported.
 	private static final int CAPTURE_NOT_SUPPORTED = 20;
+
+	private static String[] audioPermissions;
+	static {
+		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			audioPermissions = new String[]{
+					Manifest.permission.READ_MEDIA_AUDIO,
+					Manifest.permission.RECORD_AUDIO
+			};
+		} else {
+			audioPermissions = new String[]{
+					Manifest.permission.RECORD_AUDIO
+			};
+		}
+	}
 
 	private static String[] storagePermissions;
 
@@ -313,7 +305,12 @@ public class Capture extends CordovaPlugin {
 	 * Sets up an intent to capture audio.  Result handled by onActivityResult()
 	 */
 	private void captureAudio(Request req) {
-		if (isMissingPermissions(req, Manifest.permission.READ_MEDIA_AUDIO)) return;
+		ArrayList<String> requiredPermissions = new ArrayList<>(
+				storagePermissions.length + audioPermissions.length
+		);
+		requiredPermissions.addAll(Arrays.asList(audioPermissions));
+		requiredPermissions.addAll(Arrays.asList(storagePermissions));
+		if (isMissingPermissions(req, requiredPermissions)) return;
 
 		try {
 			setActivityEnabled(this.cordova.getActivity(), AudioCaptureActivity.class.getCanonicalName(), true);
