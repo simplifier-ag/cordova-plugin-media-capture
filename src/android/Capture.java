@@ -518,7 +518,15 @@ public class Capture extends CordovaPlugin {
 
 	public void onVideoActivityResult(Request req, Intent intent) {
 		// Get the uri of the video clip
-		Uri data = intent.getData();
+
+		Uri data;
+
+		if (intent != null && intent.getData() != null) {
+			data = intent.getData();
+		} else {
+			data = fileUri;
+		}
+
 		if (data == null) {
 			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Error: data is null"));
 			return;
