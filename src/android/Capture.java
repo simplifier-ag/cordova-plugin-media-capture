@@ -435,9 +435,14 @@ public class Capture extends CordovaPlugin {
 			};
 
 			this.cordova.getThreadPool().execute(processActivityResult);
+			return;
 		}
+
+		// There is no image captured so delete file
+		Capture.this.cordova.getActivity().getContentResolver().delete(fileUri, null, null);
+
 		// If canceled
-		else if (resultCode == Activity.RESULT_CANCELED) {
+		if (resultCode == Activity.RESULT_CANCELED) {
 			// If we have partial results send them back to the user
 			if (req.results.length() > 0) {
 				pendingRequests.resolveWithSuccess(req);
@@ -446,17 +451,18 @@ public class Capture extends CordovaPlugin {
 			else {
 				pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Canceled."));
 			}
+
+			return;
 		}
+
 		// If something else
+		// If we have partial results send them back to the user
+		if (req.results.length() > 0) {
+			pendingRequests.resolveWithSuccess(req);
+		}
+		// something bad happened
 		else {
-			// If we have partial results send them back to the user
-			if (req.results.length() > 0) {
-				pendingRequests.resolveWithSuccess(req);
-			}
-			// something bad happened
-			else {
-				pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Did not complete!"));
-			}
+			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Did not complete!"));
 		}
 	}
 
