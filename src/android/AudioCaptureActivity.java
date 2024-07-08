@@ -24,7 +24,6 @@ import androidx.appcompat.widget.AppCompatTextView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import org.apache.cordova.BuildConfig;
 import org.apache.cordova.LOG;
 
 import java.io.FileDescriptor;
@@ -110,10 +109,6 @@ public class AudioCaptureActivity extends Activity {
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
-		if (BuildConfig.DEBUG) {
-			LOG.setLogLevel(LOG.VERBOSE);
-		}
 
 		setContentView(R.getLayout(this, "mediacap_recorder_layout"));
 

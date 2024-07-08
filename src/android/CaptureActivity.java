@@ -47,7 +47,6 @@ import com.otaliastudios.cameraview.gesture.GestureAction;
 import com.otaliastudios.cameraview.size.SizeSelector;
 import com.otaliastudios.cameraview.size.SizeSelectors;
 
-import org.apache.cordova.BuildConfig;
 import org.apache.cordova.LOG;
 
 import java.io.FileDescriptor;
@@ -363,13 +362,6 @@ public class CaptureActivity extends AppCompatActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
-		if (BuildConfig.DEBUG) {
-			LOG.setLogLevel(LOG.VERBOSE);
-			CameraLogger.setLogLevel(CameraLogger.LEVEL_INFO);
-		} else {
-			CameraLogger.setLogLevel(CameraLogger.LEVEL_ERROR);
-		}
 
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
 				WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
