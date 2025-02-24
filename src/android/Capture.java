@@ -18,6 +18,12 @@
 */
 package org.apache.cordova.mediacapture;
 
+import static org.apache.cordova.mediacapture.FileHelper.AUDIO_TYPES;
+import static org.apache.cordova.mediacapture.FileHelper.IMAGE_JPEG;
+import static org.apache.cordova.mediacapture.FileHelper.VIDEO_3GPP;
+import static org.apache.cordova.mediacapture.FileHelper.VIDEO_MP4;
+import static org.apache.cordova.mediacapture.FileHelper.createMediaFile;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
@@ -25,6 +31,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
@@ -38,9 +45,6 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PermissionHelper;
-import org.apache.cordova.PluginManager;
-import org.apache.cordova.file.FileUtils;
-import org.apache.cordova.file.LocalFilesystemURL;
 import org.apache.cordova.mediacapture.PendingRequests.Request;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -48,20 +52,12 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class Capture extends CordovaPlugin {
 
-	private static final String VIDEO_3GPP = "video/3gpp";
-	static final String VIDEO_MP4 = "video/mpeg";
-	private static final String AUDIO_3GPP = "audio/3gpp";
-	static final String AUDIO_MPEG = "audio/mpeg";
-	private static final String[] AUDIO_TYPES = new String[]{"audio/3gpp", "audio/aac", "audio/amr", "audio/wav"};
-	static final String IMAGE_JPEG = "image/jpeg";
 
 	private static final int CAPTURE_AUDIO = 0;     // Constant for capture audio
 	private static final int CAPTURE_IMAGE = 1;     // Constant for capture image
@@ -82,6 +78,7 @@ public class Capture extends CordovaPlugin {
 	private static final int CAPTURE_NOT_SUPPORTED = 20;
 
 	private static String[] audioPermissions;
+
 	static {
 		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 			audioPermissions = new String[]{
@@ -210,7 +207,7 @@ public class Capture extends CordovaPlugin {
 		// If the mimeType isn't set the rest will fail
 		// so let's see if we can determine it.
 		if (mimeType == null || mimeType.equals("") || "null".equals(mimeType)) {
-			mimeType = FileHelper.getMimeType(fileUrl, cordova);
+			mimeType = FileHelper.getMimeType(fileUrl, cordova.getContext());
 		}
 		LOG.d(LOG_TAG, "Mime type = " + mimeType);
 
@@ -305,27 +302,40 @@ public class Capture extends CordovaPlugin {
 	 * Sets up an intent to capture audio.  Result handled by onActivityResult()
 	 */
 	private void captureAudio(Request req) {
-		ArrayList<String> requiredPermissions = new ArrayList<>(
-				storagePermissions.length + audioPermissions.length
-		);
-		requiredPermissions.addAll(Arrays.asList(audioPermissions));
-		requiredPermissions.addAll(Arrays.asList(storagePermissions));
-		if (isMissingPermissions(req, requiredPermissions)) return;
-
 		try {
+			ArrayList<String> requiredPermissions = new ArrayList<>(
+					storagePermissions.length + audioPermissions.length
+			);
+			requiredPermissions.addAll(Arrays.asList(audioPermissions));
+			requiredPermissions.addAll(Arrays.asList(storagePermissions));
+			if (isMissingPermissions(req, requiredPermissions)) return;
+
 			setActivityEnabled(this.cordova.getActivity(), AudioCaptureActivity.class.getCanonicalName(), true);
+
 			Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
 			fileUri = FileHelper.getAndCreateFile(MediaStore.Audio.Media.RECORD_SOUND_ACTION, cordova.getActivity());
-
 			intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
 
+			PackageManager packageManager = cordova.getActivity().getPackageManager();
+			List<ResolveInfo> activities = packageManager.queryIntentActivities(intent,
+					PackageManager.MATCH_DEFAULT_ONLY);
+
+			if (activities.isEmpty()) {
+				LOG.w(LOG_TAG, "No Activity found to handle Audio Capture. Forcing internal.");
+				intent = new Intent(cordova.getContext(), CaptureActivity.class);
+				intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
+			} else {
+				LOG.w(LOG_TAG, String.format("Found Activities: %s", intent.resolveActivity(cordova.getActivity().getPackageManager()).flattenToString()));
+			}
+
 			LOG.d(LOG_TAG, "Recording audio and saving to: " + fileUri.toString());
-			this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
+			this.cordova.startActivityForResult(this, intent, req.requestCode);
 		} catch (ActivityNotFoundException ex) {
 			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NOT_SUPPORTED, "No Activity found to handle Audio Capture."));
-		} catch (IllegalArgumentException e) {
+		} catch (Exception e) {
 			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Canceled."));
 		}
+
 	}
 
 	private String getTempDirectoryPath() {
@@ -353,7 +363,7 @@ public class Capture extends CordovaPlugin {
 		try {
 			fileUri = FileHelper.getAndCreateFile(MediaStore.ACTION_IMAGE_CAPTURE, cordova.getActivity());
 		} catch (IllegalArgumentException e) {
-			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Canceled."));
+			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "error creating file"));
 		}
 
 		Intent intent = req.useInternalCameraApp
@@ -363,7 +373,7 @@ public class Capture extends CordovaPlugin {
 
 		LOG.d(LOG_TAG, "Taking a picture and saving to: " + fileUri.toString());
 		setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), true);
-		this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
+		this.cordova.startActivityForResult(this, intent, req.requestCode);
 	}
 
 	private static void createWritableFile(File file) throws IOException {
@@ -391,9 +401,11 @@ public class Capture extends CordovaPlugin {
 		intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, req.duration);
 		intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, req.quality);
 
+		//TODO: resolve intent for action and launch explicit when unsuccessful?
+
 		LOG.d(LOG_TAG, "Taking a video and saving to: " + fileUri.toString());
 		setActivityEnabled(this.cordova.getActivity(), CaptureActivity.class.getCanonicalName(), true);
-		this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
+		this.cordova.startActivityForResult(this, intent, req.requestCode);
 	}
 
 	/**
@@ -476,7 +488,7 @@ public class Capture extends CordovaPlugin {
 		}
 
 		// Create a file object from the uri
-		JSONObject mediaFile = createMediaFile(data);
+		JSONObject mediaFile = createMediaFile(data, webView);
 		if (mediaFile == null) {
 			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + data));
 			return;
@@ -502,7 +514,7 @@ public class Capture extends CordovaPlugin {
 		}
 
 		// Create a file object from the uri
-		JSONObject mediaFile = createMediaFile(data);
+		JSONObject mediaFile = createMediaFile(data, webView);
 		if (mediaFile == null) {
 			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + data));
 			return;
@@ -549,7 +561,7 @@ public class Capture extends CordovaPlugin {
 		}
 
 		// Create a file object from the uri
-		JSONObject mediaFile = createMediaFile(data);
+		JSONObject mediaFile = createMediaFile(data, webView);
 		if (mediaFile == null) {
 			pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error: no mediaFile created from " + data));
 			return;
@@ -566,69 +578,6 @@ public class Capture extends CordovaPlugin {
 		}
 	}
 
-	/**
-	 * Creates a JSONObject that represents a File from the Uri
-	 *
-	 * @param data the Uri of the audio/image/video
-	 * @return a JSONObject that represents a File
-	 * @throws IOException
-	 */
-	private JSONObject createMediaFile(Uri data) {
-		File fp = webView.getResourceApi().mapUriToFile(data);
-		if (fp == null) {
-			return null;
-		}
-
-		JSONObject obj = new JSONObject();
-
-		Class webViewClass = webView.getClass();
-		PluginManager pm = null;
-		try {
-			Method gpm = webViewClass.getMethod("getPluginManager");
-			pm = (PluginManager) gpm.invoke(webView);
-		} catch (NoSuchMethodException e) {
-		} catch (IllegalAccessException e) {
-		} catch (InvocationTargetException e) {
-		}
-		if (pm == null) {
-			try {
-				Field pmf = webViewClass.getField("pluginManager");
-				pm = (PluginManager) pmf.get(webView);
-			} catch (NoSuchFieldException e) {
-			} catch (IllegalAccessException e) {
-			}
-		}
-		FileUtils filePlugin = (FileUtils) pm.getPlugin("File");
-		LocalFilesystemURL url = filePlugin.filesystemURLforLocalPath(fp.getAbsolutePath());
-
-		try {
-			// File properties
-			obj.put("name", fp.getName());
-			obj.put("fullPath", Uri.fromFile(fp));
-			if (url != null) {
-				obj.put("localURL", url.toString());
-			}
-			// Because of an issue with MimeTypeMap.getMimeTypeFromExtension() all .3gpp files
-			// are reported as video/3gpp. I'm doing this hacky check of the URI to see if it
-			// is stored in the audio or video content store.
-			if (fp.getAbsoluteFile().toString().endsWith(".3gp") || fp.getAbsoluteFile().toString().endsWith(".3gpp")) {
-				if (data.toString().contains("/audio/")) {
-					obj.put("type", AUDIO_3GPP);
-				} else {
-					obj.put("type", VIDEO_3GPP);
-				}
-			} else {
-				obj.put("type", FileHelper.getMimeType(Uri.fromFile(fp), cordova));
-			}
-
-			obj.put("lastModifiedDate", fp.lastModified());
-			obj.put("size", fp.length());
-		} catch (JSONException e) {
-			// this will never happen
-			e.printStackTrace();
-		}
-		return obj;
-	}
 
 	private JSONObject createErrorObject(int code, String message) {
 		JSONObject obj = new JSONObject();
