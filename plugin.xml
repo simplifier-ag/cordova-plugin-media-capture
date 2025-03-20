@@ -21,7 +21,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
 xmlns:android="http://schemas.android.com/apk/res/android"
            id="cordova-plugin-media-capture"
-      version="5.0.5">
+      version="6.0.0">
     <name>Capture</name>
 
     <description>Cordova Media Capture Plugin</description>
@@ -76,13 +76,14 @@ xmlns:android="http://schemas.android.com/apk/res/android"
             </feature>
         </config-file>
 
-        <config-file target="AndroidManifest.xml" parent="/*">
+        <config-file target="AndroidManifest.xml" parent="application">
             <uses-permission android:name="android.permission.RECORD_AUDIO" />
             <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
             <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
             <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
             <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
         </config-file>
 
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
@@ -166,8 +167,6 @@ xmlns:android="http://schemas.android.com/apk/res/android"
 
         <resource-file src="src/android/res/values/mediacap_strings.xml" target="res/values/mediacap_strings.xml"/>
         <resource-file src="src/android/res/values-de/mediacap_strings.xml" target="res/values-de/mediacap_strings.xml"/>
-
-        <resource-file src="src/android/res/xml/mediacapture_provider_paths.xml" target="res/xml/mediacapture_provider_paths.xml" />
 
         <js-module src="www/android/init.js" name="init">
             <runs />
