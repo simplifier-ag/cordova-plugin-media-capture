@@ -274,7 +274,7 @@ public class Capture extends CordovaPlugin {
         return obj;
     }
 
-    private boolean isMissingPermissions(Request req, ArrayList<String> permissions) {
+    private boolean isMissingPermissions(Request req, List<String> permissions) {
         ArrayList<String> missingPermissions = new ArrayList<>();
         for (String permission : permissions) {
             if (!PermissionHelper.hasPermission(this, permission)) {
@@ -282,9 +282,9 @@ public class Capture extends CordovaPlugin {
             }
         }
 
-        boolean isMissingPermissions = missingPermissions.size() > 0;
+        boolean isMissingPermissions = !missingPermissions.isEmpty();
         if (isMissingPermissions) {
-            String[] missing = missingPermissions.toArray(new String[missingPermissions.size()]);
+            String[] missing = missingPermissions.toArray(new String[0]);
             PermissionHelper.requestPermissions(this, req.requestCode, missing);
         }
         return isMissingPermissions;
@@ -353,7 +353,7 @@ public class Capture extends CordovaPlugin {
      * Sets up an intent to capture images.  Result handled by onActivityResult()
      */
     private void captureImage(Request req) {
-        if (isMissingCameraPermissions(req, Manifest.permission.READ_MEDIA_IMAGES)) return;
+        if (isMissingPermissions(req, List.of(Manifest.permission.CAMERA))) return;
 
         // Save the number of images currently on disk for later
         Cursor cursor = queryImgDB(FileHelper.isExternalContentStore()
@@ -386,7 +386,7 @@ public class Capture extends CordovaPlugin {
      * Sets up an intent to capture video.  Result handled by onActivityResult()
      */
     private void captureVideo(Request req) {
-        if (isMissingCameraPermissions(req, Manifest.permission.READ_MEDIA_VIDEO)) return;
+        if (isMissingPermissions(req, List.of(Manifest.permission.CAMERA))) return;
 
         try {
             fileUri = FileHelper.getAndCreateFile(MediaStore.ACTION_VIDEO_CAPTURE, cordova.getActivity());
