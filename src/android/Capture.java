@@ -298,13 +298,10 @@ public class Capture extends CordovaPlugin {
         return isMissingPermissions(req, permissions);
     }
 
-    private boolean isMissingCameraPermissions(Request req, String mediaPermission) {
+    private boolean isMissingCameraPermissions(Request req) {
         ArrayList<String> cameraPermissions = new ArrayList<>(Arrays.asList(storagePermissions));
         if (cameraPermissionInManifest) {
             cameraPermissions.add(Manifest.permission.CAMERA);
-        }
-        if (mediaPermission != null && android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            cameraPermissions.add(mediaPermission);
         }
         return isMissingPermissions(req, cameraPermissions);
     }
@@ -353,7 +350,7 @@ public class Capture extends CordovaPlugin {
      * Sets up an intent to capture images.  Result handled by onActivityResult()
      */
     private void captureImage(Request req) {
-        if (isMissingPermissions(req, List.of(Manifest.permission.CAMERA))) return;
+        if (isMissingCameraPermissions(req)) return;
 
         // Save the number of images currently on disk for later
         Cursor cursor = queryImgDB(FileHelper.isExternalContentStore()
@@ -386,7 +383,7 @@ public class Capture extends CordovaPlugin {
      * Sets up an intent to capture video.  Result handled by onActivityResult()
      */
     private void captureVideo(Request req) {
-        if (isMissingPermissions(req, List.of(Manifest.permission.CAMERA))) return;
+        if (isMissingCameraPermissions(req)) return;
 
         try {
             fileUri = FileHelper.getAndCreateFile(MediaStore.ACTION_VIDEO_CAPTURE, cordova.getActivity());
